@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { supabase } from '../../lib/supabase.ts'
+import ReplyForm from '../../components/Replies.vue'
 
 type Think = {
     id: number | string
@@ -164,6 +165,12 @@ watch(
                     </li>
                 </ul>
             </div>
+        </section>
+        <section>
+            <ReplyForm
+             v-if="think"
+             :think-id="String(think.id)"
+            />
         </section>
     </main>
 </template>
