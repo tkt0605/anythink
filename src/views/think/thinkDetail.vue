@@ -2,7 +2,6 @@
 import { onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { supabase } from '../../lib/supabase.ts'
-import type { M } from 'vue-router/dist/index-D7ja2BKs.js'
 
 type Think = {
     id: number | string
