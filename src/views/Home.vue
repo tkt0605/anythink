@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { supabase } from '../lib/supabase.ts'
+import { RouterLink } from 'vue-router'
 
 // Think型の定義
 type Think = {
@@ -54,14 +55,21 @@ onMounted(fetchThinks)
     <main class="">
         <textarea v-model="text" placeholder="あなたの考えを入れてください。" name="" id="" class="" />
         <button @click="createThinks" class=""> think</button>
-        <section>
-            <h2>Thinks一覧</h2>
+        <section class="">
+            <h2 class="">Thinks一覧</h2>
             <p v-if="isLoading">読み込み中...</p>
             <p v-else-if="errorMessage">{{ errorMessage }}</p>
             <p v-else-if="thinks.length === 0">まだThinkはありません。</p>
             <ul v-else>
-                <li v-for="think in thinks" :key="think.id">
-                    {{ think.text }}
+                <li v-for="think in thinks" :key="think.id" class="" @click="">
+                    <RouterLink 
+                     :to="{
+                        name: 'think-detail',
+                        params: { id: think.id}
+                     }"
+                    >
+                        {{ think.text }}
+                    </RouterLink>
                 </li>
             </ul>
         </section>
