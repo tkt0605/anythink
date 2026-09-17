@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { supabase } from '../lib/supabase';
 
 type Knowledge = {
@@ -21,6 +21,7 @@ type DistillResponse = {
 }
 const props = defineProps<{
     thinkId: string
+    discussCount: number | null
 }>()
 
 const knowledge = ref<Knowledge | null>(null)  
@@ -38,8 +39,12 @@ const FetchErrorMessage = ref('')
 const isDistilling = ref(false)
 const distillErrorMessage = ref('')
 
+const canDistill = computed(() => {
+    return (props.discussCount ?? 0) > 0 && !isDistilling.value
+})
+
 async function distillKnowledge() {
-    if(isDistilling.value){
+    if(!canDistill.value){
         return
     }
     isDistilling.value = true
@@ -172,7 +177,7 @@ watch(
 </script>
 <template>
     <section aria-labelledby="knowledge-title">
-        <h2 id="knowledge-title">Knoweldge</h2>
+        <h2 id="knowledge-title">Knowledge</h2>
 
         <p v-if="isFetchLoading">読み込んでます...</p>
 
@@ -214,14 +219,13 @@ watch(
 
             <button
                 type="button"
-                :disabled="isDistilling"
+                :disabled="!canDistill"
                 @click="distillKnowledge"
             >
-                {{ 
-                    isDistilling
-                        ? "会話を整理してます..."
-                        : "会話を蒸留する"
-                }}
+                <template v-if="isDistilling">蒸留中...</template>
+                <template v-else-if="discussCount === null">Discussを確認中...</template>
+                <template v-else-if="discussCount === 0">Discussを追加してください</template>
+                <template v-else>蒸留する</template>
             </button>
 
             <p v-if="distillErrorMessage">
@@ -259,7 +263,7 @@ watch(
                     <label for="knowledge-disagree">意見が分かれている点</label>
                     <textarea
                      :disabled="isUpsertLoading"
-                     id="knowledge-agree"
+                     id="knowledge-disagree"
                      v-model="disAgreeMents"
                      placeholder="意見が合わない所は？"
                     ></textarea>

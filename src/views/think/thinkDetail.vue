@@ -16,6 +16,7 @@ const isLoading = ref(false)
 const isRelatedLoading = ref(false)
 const errorMessage = ref('')
 const relatedErrorMessage = ref('')
+const discussCount = ref<number | null>(null)
 
 function createBigrams(text: string): Set<string>{
     const normalizedText = text
@@ -167,17 +168,17 @@ watch(
                 </ul>
             </div>
         </section>
-        <section>
+        <section >
             <ReplyForm
-             v-if="think"
-             :think-id="String(think.id)"
+                v-if="think"
+                :think-id="String(think.id)"
+                @count-change="discussCount = $event"
             />
-        </section>
         <!-- ここに、Knowledgeコンポーネントを配置 -->
-        <section>
             <Knowledge
                 v-if="think"
                 :think-id="String(think.id)"
+                :discuss-count="discussCount"
             />
         </section>
     </main>

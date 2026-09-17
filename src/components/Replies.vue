@@ -13,7 +13,9 @@ type Replies ={
 const props = defineProps<{
     thinkId: string
 }>()
-
+const emit = defineEmits<{
+    (event: 'count-change', count: number | null): void
+}>()
 const replies = ref<Replies[]>([])
 const text = ref('')
 const isFetching = ref(false)
@@ -55,7 +57,7 @@ async function fetchReplies() {
     
     isFetching.value = true
     FetcherrorMessage.value = ''
-
+    emit('count-change', null)
     try {
         const {data, error} = await supabase.from("replies")
             .select('*')
@@ -65,6 +67,7 @@ async function fetchReplies() {
             throw error
         }
         replies.value = data ?? []
+        emit('count-change', replies.value.length)
         FetcherrorMessage.value = ""
         console.log('Get Reply Successfull')
     } catch (error) {
