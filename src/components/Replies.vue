@@ -62,7 +62,7 @@ async function fetchReplies() {
             .eq("think_id",props.thinkId )
             .limit(100)
         if(error){
-            throw Error
+            throw error
         }
         replies.value = data ?? []
         FetcherrorMessage.value = ""

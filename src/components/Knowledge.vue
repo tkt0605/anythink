@@ -55,7 +55,7 @@ async function distillKnowledge() {
             },
         )
         if (error){
-            throw Error
+            throw error
         }
         if(!data){
             throw new Error('蒸留結果がありません。')
@@ -111,7 +111,7 @@ async function upsertKnowledge() {
             .select('*')
             .single()
         if (error){
-            throw Error
+            throw error
         }
         applyKnowledge(data)
     } catch (error) {
@@ -137,7 +137,7 @@ async function fetchKnowledge() {
             .eq('think_id', props.thinkId)
             .maybeSingle()
         if(error){
-            throw Error
+            throw error
         }
         if( requestThinkId !== props.thinkId ){
             return
