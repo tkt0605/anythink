@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { supabase } from '../../lib/supabase.ts'
 import ReplyForm from '../../components/Replies.vue'
+import Knowledge from '../../components/Knowledge.vue'
 
 type Think = {
     id: number | string
@@ -170,6 +171,13 @@ watch(
             <ReplyForm
              v-if="think"
              :think-id="String(think.id)"
+            />
+        </section>
+        <!-- ここに、Knowledgeコンポーネントを配置 -->
+        <section>
+            <Knowledge
+                v-if="think"
+                :think-id="String(think.id)"
             />
         </section>
     </main>
