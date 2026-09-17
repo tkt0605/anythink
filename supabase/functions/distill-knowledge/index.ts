@@ -13,7 +13,7 @@ type DistillRequest = {
 }
 
 const fixedKnowledge = {
-  summary: 'ThinkとDiscussの内容を短く整理した固定の要約す。',
+  summary: 'ThinkとDiscussの内容を短く整理した固定の要約する。',
   common_points: '参加者は、このテーマに関して考える価値があると認識している。',
   disagreements: '具体的な実現方法について意見が分かれている。',
   open_questions: '次に、どの方法を検証すべきかは未解決です。',

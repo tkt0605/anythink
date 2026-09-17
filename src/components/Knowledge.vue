@@ -12,7 +12,13 @@ type Knowledge = {
     created_at: string,
     updated_at: string
 }
-
+type DistillResponse = {
+    think_id: string,
+    summary: string,
+    common_points: string,
+    disagreements: string,
+    open_questions: string
+}
 const props = defineProps<{
     thinkId: string
 }>()
@@ -28,6 +34,45 @@ const isUpsertLoading = ref(false)
 
 const UpsertErrorMessage = ref('')
 const FetchErrorMessage = ref('')
+
+const isDistilling = ref(false)
+const distillErrorMessage = ref('')
+
+async function distillKnowledge() {
+    if(isDistilling.value){
+        return
+    }
+    isDistilling.value = true
+    distillErrorMessage.value = ''
+
+    try {
+        const { data, error } = await supabase.functions.invoke<DistillResponse>(
+            'distill-knowledge',
+            {
+                body: {
+                    thinkId: props.thinkId,
+                },
+            },
+        )
+        if (error){
+            throw Error
+        }
+        if(!data){
+            throw new Error('蒸留結果がありません。')
+        }
+
+        summary.value = data.summary
+        commonPoints.value = data.common_points
+        disAgreeMents.value = data.disagreements
+        openQuestions.value = data.open_questions
+    } catch (error) {
+        console.error('Distill実行に失敗:', error)
+        distillErrorMessage.value = '会話の蒸留に失敗しました。'
+        return
+    }finally{
+        isDistilling.value = false
+    }
+}
 
 function applyKnowledge(data: Knowledge | null){
     knowledge.value = data
@@ -166,6 +211,22 @@ watch(
             </article>
 
             <p v-else>Knowledgeはまだありません。</p>
+
+            <button
+                type="button"
+                :disabled="isDistilling"
+                @click="distillKnowledge"
+            >
+                {{ 
+                    isDistilling
+                        ? "会話を整理してます..."
+                        : "会話を蒸留する"
+                }}
+            </button>
+
+            <p v-if="distillErrorMessage">
+                {{ distillErrorMessage }}
+            </p>
 
             <!-- 新規作成フォーム -->
             <form @submit.prevent="upsertKnowledge">
