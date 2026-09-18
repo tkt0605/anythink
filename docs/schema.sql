@@ -105,5 +105,110 @@ alter policy "Allow anonymous knowledge update"
         with check(true);
 
 -- 第六次テスト、各自テーブルの引数追加
-
 -- thinksテーブルで引数追加
+alter table public.thinks
+    add column if not exists user_id uuid
+        references auth.users(id) on delete cascade,
+    add column if not exists is_public boolean
+        not null default true;
+
+-- repliesテーブルで引数追加
+alter table public.replies
+    add column if not exists user_id uuid 
+        references auth.users(id) on delete cascade;
+
+
+-- 第7次テスト、各自テーブル・ポリシー追加
+
+-- thinksテーブルにuser_id用のポリシー作成
+alter policy "Allow anonymous inserts" on public.thinks
+    to  authenticated
+    with check(
+        (select auth.uid()) = user_id
+    );
+
+alter policy "Allow anonymous reads" on public.thinks
+    to anon, authenticated
+    using(
+        is_public = true 
+         or user_id = (select auth.uid())
+    );
+
+-- repliesテーブルにuser_id用のポリシー作成
+
+alter policy "Allow anonymous inserts" on public.replies
+    to authenticated
+    with check(
+        (select auth.uid()) = replies.user_id
+        
+        and
+
+        exists (
+            select 1
+            from public.thinks as think
+            where think.id = replies.think_id
+                and (
+                    think.is_public = true
+                    or think.user_id = (select auth.uid())
+                )
+        )
+    );
+
+alter policy "Allow anonymous reads" on public.replies
+    to anon, authenticated
+    using(
+        exists (
+            select 1
+            from public.thinks as think
+            where think.id = replies.think_id
+                and (
+                    think.is_public = true
+                    or think.user_id = (select auth.uid())
+                )
+        )
+    );
+
+-- Knowledgeテーブル
+alter policy "Allow anonymous knowledge inserts" on public.knowledge
+    to authenticated
+    with check(
+        exists(
+            select 1 
+            from public.thinks as think
+            where think.id = knowledge.think_id
+                and think.user_id = (select auth.uid())
+        )
+    );
+
+alter policy "Allow anonymous knowledge select" on public.knowledge
+    to anon, authenticated
+    using(
+        exists (
+            select 1
+            from public.thinks as think
+            where think.id = knowledge.think_id
+                and (
+                    think.is_public = true
+                    or think.user_id = (select auth.uid())
+                )
+        )
+    );
+
+alter policy "Allow anonymous knowledge update" on public.knowledge
+    to authenticated
+    using(
+        exists(
+            select 1
+            from public.thinks as think
+            where think.id = knowledge.think_id
+                and think.user_id = (select auth.uid())
+        )
+    )
+    with check(
+        exists(
+            select 1
+            from public.thinks as think
+            where think.id = knowledge.think_id
+                and think.user_id = (select auth.uid())
+        )
+    );
