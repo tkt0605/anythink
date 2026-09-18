@@ -38,7 +38,12 @@ async function fetchThinks() {
     isLoading.value = true
     errorMessage.value = ''
 
-    const { data, error } = await supabase.from('thinks').select('id, text')
+    const { data, error } = await supabase
+        .from('thinks')
+        .select('*')
+        .order('created_at', {
+            ascending: false
+        })
     if (error){
         console.error('Error Fetching Data:', error)
         errorMessage.value = '一覧の取得に失敗しました。'

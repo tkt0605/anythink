@@ -62,6 +62,9 @@ async function fetchReplies() {
         const {data, error} = await supabase.from("replies")
             .select('*')
             .eq("think_id",props.thinkId )
+            .order('created_at', {
+                ascending: true
+            })
             .limit(100)
         if(error){
             throw error
@@ -120,7 +123,7 @@ watch(
         <ul v-else>
             <li v-for="reply in replies" :key="reply.id" class="">
                 <span class="">
-                    <p class="">id: {{ reply.id }}</p>
+                    <p></p>
                     <time :datetime="reply.created_at">
                         {{ formatCreatedAt(reply?.created_at) }}
                     </time>
