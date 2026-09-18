@@ -62,6 +62,7 @@ async function fetchReplies() {
         const {data, error} = await supabase.from("replies")
             .select('*')
             .eq("think_id",props.thinkId )
+            // ここで、ascendingをtrueにすることで、最新ポストを後に表示。
             .order('created_at', {
                 ascending: true
             })

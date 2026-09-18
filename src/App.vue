@@ -46,24 +46,34 @@ async function handleSignOut() {
 
 <template>
   <!-- ユーザー認証用のHeader -->
-  <header v-if="isAuthReady">
-    <template v-if="isLoggedIn">
-      <span>{{ user?.email }}</span>
+   <!-- <template>は、HTMLの中身が表示されないテンプレ保管用要素。　-->
+  <header>
+    <div>
+      <b>AnyThink</b>
+    </div>
+    <p v-if="!isAuthReady">認証状況を確認中...</p>
 
-      <button 
-        type="button"
-        :disabled="isSignOut"
-        @click="handleSignOut"
-      >
-       {{ isSignOut ? "ログアウト中..." : "ログアウト" }}
-      </button>
-      <p
-        v-if="isSignOutError"
-        role="alert"
-      >
-        {{ isSignOutError }}
-      </p>
-    </template>
+    <RouterLink 
+      v-else-if="!user"
+      type="button"
+      to="/signin"
+    >
+      ログイン
+    </RouterLink>
+    <button 
+      v-else
+      type="button"
+      :disabled="isSignOut"
+      @click="handleSignOut"
+    >
+     {{ isSignOut ? "ログアウト中..." : "ログアウト" }}
+    </button>
+    <p
+      v-if="isSignOutError"
+      role="alert"
+    >
+      {{ isSignOutError }}
+    </p>
   </header>
   <!-- ページの表示欄 -->
   <RouterView />
