@@ -11,7 +11,6 @@ const router = useRouter();
 const { 
   user, 
   isAuthReady, 
-  isLoggedIn, 
   initializeAuth, 
   signOut 
 } = useAuth();
