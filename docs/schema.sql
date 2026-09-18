@@ -1,15 +1,15 @@
 -- 第一次テスト、名無しユーザでもinsert可能に
 alter table public.thinks enable row level security;
-create policy "Allow anonymous inserts"on public.thinks
+create policy "Allow anonymous inserts" on public.thinks
   for insert
     to anon
-    with check (true)
+    with check (true);
 -- 第二次テスト、名無しユーザでもselect可能に
 create policy "Allow anonymous reads"
 on public.thinks
     for select
     to anon
-    using (true)
+    using (true);
 
 -- 第三次テスト、Discuss用のテーブルrepliesテーブルを追加
 create table public.replies (
@@ -62,3 +62,48 @@ create policy "Allow anonymous knowledge update" on public.knowledge
         to anon
         using (true)
         with check (true);
+
+-- 第五次テスト、全てのテーブルポリシーにauthenticatedを許可。
+-- Insert ー＞　Auth　Select -> AnonとAuth 
+
+-- Thinksテーブルのポリシー編集
+alter policy "Allow anonymous inserts"
+    on public.thinks
+        to authenticated
+        with check (true);
+
+alter policy "Allow anonymous reads"
+    on public.thinks
+        to anon, authenticated
+        using(true);
+
+-- Repliesテーブルのポリシー編集
+alter policy "Allow anonymous inserts"
+    on public.replies
+        to authenticated
+        with check(true);
+
+alter policy "Allow anonymous reads"
+    on public.replies
+        to anon, authenticated
+        using(true);
+
+-- Knowledgeテーブルのポリシー編集
+alter policy "Allow anonymous knowledge inserts"
+    on public.knowledge
+        to authenticated
+        with check(true);
+
+alter policy "Allow anonymous knowledge select"
+    on public.knowledge
+        to anon, authenticated
+        using(true);
+
+alter policy "Allow anonymous knowledge update"
+    on public.knowledge
+        to authenticated
+        with check(true);
+
+-- 第六次テスト、各自テーブルの引数追加
+
+-- thinksテーブルで引数追加
