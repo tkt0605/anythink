@@ -212,3 +212,21 @@ alter policy "Allow anonymous knowledge update" on public.knowledge
                 and think.user_id = (select auth.uid())
         )
     );
+
+
+-- thinks・repliesテーブルのuser_idに権限追加
+-- 今の設定だと、user_idにauth.uid()が自動設定されない。
+
+-- --　一旦、user_idの既存データを削除する。
+-- delete from public.thinks  where user_id is null;
+-- delete from public.replies where user_id is null;
+
+-- thinksテーブルのuser_idにauth.uid()をデフォで追加させる。
+alter table public.thinks
+    alter column user_id set default auth.uid(),
+    alter column user_id set not null;
+
+-- repliesテーブルも同様に
+alter table public.replies
+    alter column user_id set default auth.uid(),
+    alter column user_id set not null;
