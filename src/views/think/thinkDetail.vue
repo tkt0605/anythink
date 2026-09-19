@@ -1,15 +1,21 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { supabase } from '../../lib/supabase.ts'
 import ReplyForm from '../../components/Replies.vue'
 import Knowledge from '../../components/Knowledge.vue'
+import { useAuth } from '../../composables/useAuth.ts'
 
 type Think = {
     id: number | string
     text: string
 }
-const think = ref<Think | null>(null)
+
+type ThinkDetail = Think&{
+    user_id: string
+}
+const { user } = useAuth();
+const   think = ref<ThinkDetail | null>(null)
 const relatedThinks = ref<Think[]>([])
 const route = useRoute()
 const isLoading = ref(false)
@@ -17,6 +23,14 @@ const isRelatedLoading = ref(false)
 const errorMessage = ref('')
 const relatedErrorMessage = ref('')
 const discussCount = ref<number | null>(null)
+
+const isThinkOwner = computed(() => {
+    return (
+        user.value !== null &&
+        think.value !== null &&
+        user.value.id === think.value.user_id
+    )
+})
 
 function createBigrams(text: string): Set<string>{
     const normalizedText = text
@@ -95,7 +109,7 @@ async function fetchThinkDetail(thinkId: number | string){
     relatedThinks.value = []
 
     const { data, error } = await supabase.from('thinks')
-        .select('id, text')
+        .select('id, text, user_id')
         .eq('id', thinkId)
         .maybeSingle()
     
@@ -179,6 +193,7 @@ watch(
                 v-if="think"
                 :think-id="String(think.id)"
                 :discuss-count="discussCount"
+                :can-manage="isThinkOwner"
             />
         </section>
     </main>

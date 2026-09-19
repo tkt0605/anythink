@@ -416,7 +416,7 @@ enabled = true
 
 [functions.distill-knowledge]
 enabled = true
-verify_jwt = false
+verify_jwt = true
 import_map = "./functions/distill-knowledge/deno.json"
 # Uncomment to specify a custom file path to the entrypoint.
 # Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx

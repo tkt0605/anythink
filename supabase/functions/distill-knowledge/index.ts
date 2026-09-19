@@ -67,7 +67,7 @@ const distillSchema = {
 // Use secret for Server-to-server, internal calls
 export default {
   fetch: withSupabase(
-    {auth: 'publishable'},
+    {auth: 'user'},
     async (request, context) => {
       if(request.method !== 'POST'){
         return Response.json(
@@ -91,7 +91,7 @@ export default {
         // thinksを取得
         const {data: think,error: thinkError} = await context.supabase
           .from('thinks')
-          .select('id, text')
+          .select('id, text, user_id')
           .eq('id', thinkId)
           .maybeSingle()
         if(thinkError){
@@ -104,6 +104,14 @@ export default {
           )
         }
 
+        const callerId = context.userClaims?.id
+
+        if(!callerId || think.user_id !== callerId ){
+          return Response.json(
+            {error: "このThinkを蒸留する権利はありません。" },
+            {status: 403 }
+          )
+        }
         // Replyの取得
         const {data: replies, error: repliesError} = await context.supabase
           .from('replies')
@@ -196,20 +204,15 @@ export default {
           think_id: thinkId,
           ...distillResult
         })
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "不明なエラーが発生しました。"
+      } catch (error) { 
+        // const errorMessage =
+        //   error instanceof Error
+        //     ? error.message
+        //     : "不明なエラーが発生しました。"
         console.error('Distill Error:', error)
-
         return Response.json(
-          {
-            error: errorMessage
-          },
-          {
-            status: 500
-          },
+          { error: "会話の蒸留に失敗しました。" },
+          { status: 500 },
         )
       }
     },

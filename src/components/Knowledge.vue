@@ -22,6 +22,7 @@ type DistillResponse = {
 const props = defineProps<{
     thinkId: string
     discussCount: number | null
+    canManage: boolean
 }>()
 
 const knowledge = ref<Knowledge | null>(null)  
@@ -40,8 +41,13 @@ const isDistilling = ref(false)
 const distillErrorMessage = ref('')
 
 const canDistill = computed(() => {
-    return (props.discussCount ?? 0) > 0 && !isDistilling.value
+    return (
+        props.canManage &&
+        (props.discussCount ?? 0) > 0 &&
+        !isDistilling.value
+    )
 })
+
 
 async function distillKnowledge() {
     if(!canDistill.value){
@@ -91,10 +97,8 @@ function applyKnowledge(data: Knowledge | null){
 
 async function upsertKnowledge() {
     const trimmedSummary = summary.value.trim()
+    if( isUpsertLoading.value || !trimmedSummary || !props.canManage)return
 
-    if(isUpsertLoading.value || !trimmedSummary ){
-        return
-    }
     isUpsertLoading.value = true
     UpsertErrorMessage.value = ''
 
@@ -174,6 +178,7 @@ watch(
     },
     { immediate: true }
 )
+
 </script>
 <template>
     <section aria-labelledby="knowledge-title">
@@ -217,80 +222,82 @@ watch(
 
             <p v-else>Knowledgeはまだありません。</p>
 
-            <button
-                type="button"
-                :disabled="!canDistill"
-                @click="distillKnowledge"
-            >
-                <template v-if="isDistilling">蒸留中...</template>
-                <template v-else-if="discussCount === null">Discussを確認中...</template>
-                <template v-else-if="discussCount === 0">Discussを追加してください</template>
-                <template v-else>蒸留する</template>
-            </button>
-
-            <p v-if="distillErrorMessage">
-                {{ distillErrorMessage }}
-            </p>
-
-            <!-- 新規作成フォーム -->
-            <form @submit.prevent="upsertKnowledge">
-                <h3>
-                    {{ knowledge ? "knowledgeを更新" : "knowledgeを作成" }}
-                </h3>
-
-                <div>
-                    <label for="knowledge-summary">要約</label>
-                    <textarea
-                     :disabled="isUpsertLoading"
-                     id="knowledge-summary"
-                     v-model="summary"
-                     placeholder="全体の要約をしてください。"
-                     required
-                    ></textarea>
-                </div>
-
-                <div>
-                    <label for="knowledge-common">共通している点</label>
-                    <textarea
-                     :disabled="isUpsertLoading"
-                     id="knowledge-common"
-                     v-model="commonPoints"
-                     placeholder="参加者の共通するものは？"
-                    ></textarea>
-                </div>
-
-                <div>
-                    <label for="knowledge-disagree">意見が分かれている点</label>
-                    <textarea
-                     :disabled="isUpsertLoading"
-                     id="knowledge-disagree"
-                     v-model="disAgreeMents"
-                     placeholder="意見が合わない所は？"
-                    ></textarea>
-                </div>
-                
-                <div>
-                    <label for="knowledge-open-question">解決してない点</label>
-                    <textarea
-                     :disabled="isUpsertLoading"
-                     id="knowledge-open-question"
-                     v-model="openQuestions"
-                     placeholder="解決してない所は？"
-                    ></textarea>
-                </div>
-
-                <!-- ここでは、Knowledgeがあるかないかで`更新`か`送信`を判断している。 -->
+            <article v-if="canManage">
                 <button
-                    type="submit"
-                    :disabled="isUpsertLoading || !summary.trim()"
+                    type="button"
+                    :disabled="!canDistill"
+                    @click="distillKnowledge"
                 >
-                    {{ isUpsertLoading ? '保存中...': knowledge ? '更新する' : '送信する'}}
+                    <template v-if="isDistilling">蒸留中...</template>
+                    <template v-else-if="discussCount === null">Discussを確認中...</template>
+                    <template v-else-if="discussCount === 0">Discussを追加してください</template>
+                    <template v-else>蒸留する</template>
                 </button>
-                <!-- エラーハンドリング -->
-                <p v-if="UpsertErrorMessage">
-                    {{ UpsertErrorMessage }}
+    
+                <p v-if="distillErrorMessage">
+                    {{ distillErrorMessage }}
                 </p>
-            </form>
+    
+                <!-- 新規作成フォーム -->
+                <form @submit.prevent="upsertKnowledge">
+                    <h3>
+                        {{ knowledge ? "knowledgeを更新" : "knowledgeを作成" }}
+                    </h3>
+    
+                    <div>
+                        <label for="knowledge-summary">要約</label>
+                        <textarea
+                         :disabled="isUpsertLoading"
+                         id="knowledge-summary"
+                         v-model="summary"
+                         placeholder="全体の要約をしてください。"
+                         required
+                        ></textarea>
+                    </div>
+    
+                    <div>
+                        <label for="knowledge-common">共通している点</label>
+                        <textarea
+                         :disabled="isUpsertLoading"
+                         id="knowledge-common"
+                         v-model="commonPoints"
+                         placeholder="参加者の共通するものは？"
+                        ></textarea>
+                    </div>
+    
+                    <div>
+                        <label for="knowledge-disagree">意見が分かれている点</label>
+                        <textarea
+                         :disabled="isUpsertLoading"
+                         id="knowledge-disagree"
+                         v-model="disAgreeMents"
+                         placeholder="意見が合わない所は？"
+                        ></textarea>
+                    </div>
+                    
+                    <div>
+                        <label for="knowledge-open-question">解決してない点</label>
+                        <textarea
+                         :disabled="isUpsertLoading"
+                         id="knowledge-open-question"
+                         v-model="openQuestions"
+                         placeholder="解決してない所は？"
+                        ></textarea>
+                    </div>
+    
+                    <!-- ここでは、Knowledgeがあるかないかで`更新`か`送信`を判断している。 -->
+                    <button
+                        type="submit"
+                        :disabled="isUpsertLoading || !summary.trim()"
+                    >
+                        {{ isUpsertLoading ? '保存中...': knowledge ? '更新する' : '送信する'}}
+                    </button>
+                    <!-- エラーハンドリング -->
+                    <p v-if="UpsertErrorMessage">
+                        {{ UpsertErrorMessage }}
+                    </p>
+                </form>
+            </article>
         </template>
     </section>
 </template>

@@ -55,7 +55,7 @@ async function handleSignOut() {
     <RouterLink 
       v-else-if="!user"
       type="button"
-      to="/signin"
+      to="/signup"
     >
       ログイン
     </RouterLink>
