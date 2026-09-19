@@ -6,11 +6,11 @@ import { supabase } from '../../lib/supabase';
 const router = useRouter();
 
 onMounted(async() => {
-    const code = new URL(window.location.href).searchParams.get('code') ?? ''
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    // const code = new URL(window.location.href).searchParams.get('code') ?? ''    
+    // const { error } = await supabase.auth.exchangeCodeForSession(code)
 
-    const data = error ? {path: '/signup', query: {AuthError: '1'}} : '/home'
-    router.replace(data)
+    // const data = error ? {path: '/auth/signup', query: {AuthError: '1'}} : '/home'
+    // router.replace(data)
 
     try {
         const code = new URL(window.location.href).searchParams.get('code') ?? ''

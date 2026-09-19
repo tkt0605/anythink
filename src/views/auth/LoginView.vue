@@ -1,55 +1,66 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { supabase } from '../../lib/supabase';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { AuthApiError } from '@supabase/supabase-js'
 
-const route = useRoute();
+const route = useRoute()
+const router = useRouter()
 
 const email = ref('')
+const password = ref('')
 const isSending = ref(false)
-const isSent = ref(false)
+const isSubmiting = ref(false)
 const errorMessage = ref(
     route.query.AuthError === '1'
-     ? "認証リンクが無効か、期限切れです。もう一度ログインをお願いします。"
+     ? "ログインに失敗しました。もう一度ログインをお願いします。"
      : ""
 )
 
 
-async function sendMagicLink() {
+async function AuthSignin() {
     const trimmedEmail = email.value.trim()
-
-    if(!trimmedEmail || isSending.value){
+    const trimmedPass = password.value.trim()
+    if(!trimmedEmail || !trimmedPass || isSending.value){
         return
     }
 
     isSending.value = true
-    isSent.value = false
+    isSubmiting.value = false
     errorMessage.value = ''
 
     try {
-        const {error} = await supabase.auth.signInWithOtp({
+        // const {error} = await supabase.auth.signInWithOtp({
+        //     email: trimmedEmail,
+        //     options: {
+        //         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        //         shouldCreateUser: true
+        //     }
+        // })
+        const { error } = await supabase.auth.signInWithPassword({
             email: trimmedEmail,
-            options: {
-                emailRedirectTo: `${window.location.origin}/auth/callback`,
-                shouldCreateUser: true
-            }
+            password: trimmedPass,
         })
-
         if(error){
             throw error
         }
-
-        isSent.value = true
+        isSubmiting.value = true
+        const next = route.query.next
+        const destination = typeof next === "string" &&
+            next.startsWith('/') &&
+            !next.startsWith('//') 
+                ? next
+                : "/home"
+        await router.replace(destination)
     } catch (error) {
-        console.error('認証メール送信失敗:', error)
+        console.error('ログインリクエスト・送信失敗:', error)
         if(error instanceof AuthApiError && error.status === 429){
-             errorMessage.value ='認証メールの送信回数が上限に達しました。しばらく待ってからもう一度お試しください。'
+             errorMessage.value ='メールの送信回数が上限に達しました。しばらく待ってからもう一度お試しください。'
         }
-        errorMessage.value = "認証メールを送信できませんでした。時間をおいてもう一度、お試し下さい。"
+        errorMessage.value = "ログインできませんでした。時間をおいてもう一度、お試し下さい。"
     }finally{
         isSending.value = false
-        // isSent.value = false
+        // isSubmiting..value = false
     }
 }
 
@@ -58,7 +69,7 @@ async function sendMagicLink() {
     <main>
         <h1>ログイン</h1>
 
-        <form @submit.prevent="sendMagicLink">
+        <form @submit.prevent="AuthSignin">
             <label for="auth-email">メールアドレス</label>
             <input
                 type="email"
@@ -68,21 +79,32 @@ async function sendMagicLink() {
                 :disabled="isSending"
                 required
             />
-
+            <label for="auth-pass">パスワード</label>
+            <input
+                type="password"
+                id="auth-pass"
+                v-model="password"
+                autocomplete="password"
+                :disabled="isSending"
+                required
+            />
             <button
                 type="submit"
-                :disabled="isSending || isSent || !email.trim()"
+                :disabled="isSending || !password || !email.trim()"
             >
-                {{ isSending ? "送信中..." : isSent ? "送信済み" : "ログイン" }}
+                {{   isSubmiting ? "ログイン中..." : "ログイン" }}
             </button>
         </form>
-        <p v-if="isSent">
+        <!-- <p v-if="isSubmiting">
             認証メールを送信しました。
             メール内のリンクを開いてください。
-        </p>
+        </p> -->
 
         <p v-if="errorMessage" role="alert">
             {{ errorMessage }}
         </p>
+        <div>
+            まだ、アカウントをお持ちでない方は<RouterLink to="/auth/signup">こちら</RouterLink>です。
+        </div>
     </main>
 </template>

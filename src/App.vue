@@ -31,7 +31,7 @@ async function handleSignOut() {
   try {
     await signOut()
     await router.push({
-      name: "signup"
+      name: "login"
     })
   } catch (error) {
     isSignOutError.value = "ログアウトできませんでした。もう一度お試しください。"
@@ -55,7 +55,7 @@ async function handleSignOut() {
     <RouterLink 
       v-else-if="!user"
       type="button"
-      to="/signup"
+      to="/auth/login"
     >
       ログイン
     </RouterLink>
