@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
 import { supabase } from '../lib/supabase.ts'
-
+import { useAuth } from '../composables/useAuth.ts';
 
 type Replies ={
     id: number | string
@@ -23,7 +23,13 @@ const isPosting = ref(false)
 const FetcherrorMessage = ref('')
 const PosterrorMessage = ref('')
 
+const {
+    user,
+    isAuthReady
+} = useAuth()
+
 async function PostReplies(){
+    if(!user.value) return
     const Textvalue = text.value.trim()
     if(!Textvalue || isPosting.value){
         return
@@ -134,7 +140,10 @@ watch(
                 </p>
             </li>
         </ul>
-        <form @submit.prevent="PostReplies">
+    </section>
+    <section>
+        <p v-if="!isAuthReady">認証確認中...</p>
+        <form v-else-if="user" @submit.prevent="PostReplies">
             <label for="reply-text">返信を書く</label>
 
             <textarea
@@ -156,5 +165,8 @@ watch(
                 {{ PosterrorMessage }}
             </p>
         </form>
+        <p v-else>
+            Discussするにはログインしてください。
+        </p>
     </section>
 </template>

@@ -3,7 +3,7 @@ import { onMounted, ref } from 'vue'
 import { supabase } from '../lib/supabase.ts'
 import { RouterLink } from 'vue-router' 
 
-// import { useAuth } from '../composables/useAuth.ts'
+import { useAuth } from '../composables/useAuth.ts'
 
 // Think型の定義
 type Think = {
@@ -19,15 +19,14 @@ const isLoading = ref(false)
 // エラーメッセージ用の引数
 const errorMessage = ref('')
 
-// const {
-//     user,
-//     isAuthReady,
-//     initializeAuth,
-//     signOut
-// }= useAuth()
+const {
+    user,
+    isAuthReady
+}= useAuth()
 
 
 async function createThinks() {
+    if(!user.value) return
     const trimmedText = text.value.trim()
     if (!trimmedText) return
 
@@ -83,8 +82,21 @@ onMounted(fetchThinks)
 
 <template>
     <main class="">
-        <textarea v-model="text" placeholder="あなたの考えを入れてください。" name="" id="" class="" />
-        <button @click="createThinks" class=""> think</button>
+        <p v-if="!isAuthReady">認証確認中...</p>
+        <form v-else-if="user" @submit.prevent="createThinks">
+            <textarea
+                v-model="text"
+                placeholder="あなたの考えを入れてください。"
+                :disabled="isLoading"
+            />
+            <button 
+                type="submit"
+                :disabled="isLoading || !text.trim()"
+            > {{ isLoading ? "処理中..." : "ポスト" }}</button>
+        </form>
+        <p v-else>
+            Thinkを投稿するにはログインしてください。
+        </p>
         <section class="">
             <h2 class="">Thinks一覧</h2>
             <p v-if="isLoading">読み込み中...</p>
