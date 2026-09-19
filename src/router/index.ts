@@ -1,4 +1,5 @@
 import {createRouter, createWebHistory} from 'vue-router'
+import Index from '../views/Index.vue'
 import Home from '../views/Home.vue'
 import ThinkDetail from '../views/think/thinkDetail.vue'
 import LoginView from '../views/auth/LoginView.vue'
@@ -8,7 +9,8 @@ import { supabase } from '../lib/supabase.ts'
 const routes = createRouter({
     history: createWebHistory(),
     routes: [
-        {path: '/', name: 'home', component: Home},
+        {path: '/', name: 'index', component: Index},
+        {path: '/home', name: 'home', component: Home},
         {path: '/thinks/:id', name: 'think-detail', component: ThinkDetail},
         
         // ここは、ユーザー認証用のルート
