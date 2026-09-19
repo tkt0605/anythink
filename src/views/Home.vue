@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { supabase } from '../lib/supabase.ts'
-import { RouterLink } from 'vue-router'
+import { RouterLink } from 'vue-router' 
+
+// import { useAuth } from '../composables/useAuth.ts'
 
 // Think型の定義
 type Think = {
@@ -17,40 +19,63 @@ const isLoading = ref(false)
 // エラーメッセージ用の引数
 const errorMessage = ref('')
 
+// const {
+//     user,
+//     isAuthReady,
+//     initializeAuth,
+//     signOut
+// }= useAuth()
+
+
 async function createThinks() {
-    if(!text.value.trim()) return
-    const { error } = await supabase.from('thinks').insert({
-        text: text.value.trim()
-    })
-    if (error){
-        console.error('Error Inserting Error:', error)
-        errorMessage.value = "Thinkの作成に失敗しました。"
+    const trimmedText = text.value.trim()
+    if (!trimmedText) return
+
+    isLoading.value = true
+    errorMessage.value = ""
+
+    try {
+        const { error } = await supabase
+            .from('thinks')
+            .insert({
+                text: trimmedText
+            })
+        if(error) throw error
+        text.value = ""
+        await fetchThinks()
+    } catch (error) {
+        console.error('Error Creating Error:', error)
+        errorMessage.value = "Thinksの作成に失敗しました。ログインして再度挑戦してください。"
         return
-    }else{
-        errorMessage.value = ''
-        console.log('Think Created Successfully')
+    }finally{
+        isLoading.value = false
     }
-    text.value = ''
-    await fetchThinks()
 }
 
 async function fetchThinks() {
     isLoading.value = true
     errorMessage.value = ''
 
-    const { data, error } = await supabase
-        .from('thinks')
-        .select('*')
-        .order('created_at', {
-            ascending: false
-        })
-    if (error){
+    try {
+        const { data, error } = await supabase
+            .from('thinks')
+            .select('*')
+            .order('created_at', {
+                ascending: false
+            })
+        if (error){
+            throw error
+        }
+        thinks.value = data ?? []
+        errorMessage.value = ""
+
+    } catch (error) {
         console.error('Error Fetching Data:', error)
         errorMessage.value = '一覧の取得に失敗しました。'
-    }else{
-        thinks.value = data ?? []
+        return
+    }finally{
+        isLoading.value = false
     }
-    isLoading.value = false
 }
 
 onMounted(fetchThinks)
