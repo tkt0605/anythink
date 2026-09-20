@@ -13,14 +13,14 @@ const isSent = ref(false)
 
 const errorMessage = ref(
     route.query.AuthError === "1"
-        ? "ユーザー作成時にエラーが発生しました。もう一度登録をお願いします。"
+        ? "メールアドレスの確認に失敗しました。確認リンクが無効か、期限切れの可能性があります。"
         : ""
 )
 
 async function AuthSignup() {
     const trimmedEmail = email.value.trim()
-    const trimmedPass = password.value.trim()
-    if (!trimmedEmail || !trimmedPass || isSending.value) return
+    const submittedPass = password.value
+    if (!trimmedEmail || !submittedPass || isSending.value) return
 
     isSending.value = true
     isSent.value = false
@@ -29,7 +29,7 @@ async function AuthSignup() {
     try {
         const { error } = await supabase.auth.signUp({
             email: trimmedEmail,
-            password: trimmedPass,
+            password: submittedPass,
             options: {
                 emailRedirectTo: `${window.location.origin}/auth/callback`,
             }
@@ -43,9 +43,16 @@ async function AuthSignup() {
     } catch (error) {
         console.error('アカウント作成失敗:', error)
         if(error instanceof AuthApiError && error.status === 429){
-            errorMessage.value = '認証メールの送信回数が上限に達しました。しばらく待ってからもう一度お試しください。'
+            errorMessage.value =`
+                アカウント作成の試行回数が上限に達しました。しばらく待ってからもう一度お試しください。
+            `
+        }else if( error instanceof AuthApiError && error.status === 400 ){
+            errorMessage.value = `
+                アカウント作成に失敗しました。内容を確認してください。
+            `
+        }else{
+            errorMessage.value = "アカウントを作成できませんでした。時間をおいてもう一度、お試し下さい。"
         }
-        errorMessage.value = "アカウントを作成できませんでした。時間をおいてもう一度、お試し下さい。"
     }finally{
         isSending.value = false
     }

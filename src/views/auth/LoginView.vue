@@ -20,8 +20,8 @@ const errorMessage = ref(
 
 async function AuthSignin() {
     const trimmedEmail = email.value.trim()
-    const trimmedPass = password.value.trim()
-    if(!trimmedEmail || !trimmedPass || isSending.value){
+    const submittedPass = password.value
+    if(!trimmedEmail || !submittedPass || isSending.value){
         return
     }
 
@@ -39,7 +39,7 @@ async function AuthSignin() {
         // })
         const { error } = await supabase.auth.signInWithPassword({
             email: trimmedEmail,
-            password: trimmedPass,
+            password: submittedPass,
         })
         if(error){
             throw error
@@ -55,9 +55,16 @@ async function AuthSignin() {
     } catch (error) {
         console.error('ログインリクエスト・送信失敗:', error)
         if(error instanceof AuthApiError && error.status === 429){
-             errorMessage.value ='メールの送信回数が上限に達しました。しばらく待ってからもう一度お試しください。'
+            errorMessage.value = `
+                ログイン試行回数が上限に達しました。しばらく待ってからもう一度お試しください。
+            `
+        }else if (error instanceof AuthApiError && error.status === 400){
+            errorMessage.value = `
+                ログインできませんでした。内容を確認してください。
+            `
+        }else{
+            errorMessage.value = "ログインできませんでした。時間をおいてもう一度、お試し下さい。"
         }
-        errorMessage.value = "ログインできませんでした。時間をおいてもう一度、お試し下さい。"
     }finally{
         isSending.value = false
         // isSubmiting..value = false
