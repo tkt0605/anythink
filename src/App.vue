@@ -40,7 +40,7 @@ async function handleSignOut() {
         </RouterLink>
 
         <nav class="site-nav" aria-label="メインメニュー">
-          <RouterLink :to="{ name: 'home' }">投稿を見る</RouterLink>
+          <RouterLink :to="{ name: 'home' }">ホーム</RouterLink>
         </nav>
 
         <div class="header-actions">
