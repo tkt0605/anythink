@@ -83,7 +83,7 @@ async function fetchRelatedThinkss(currentThink: Think){
         .limit(100)
     if (error){
         console.error('Thinks関連データ取得Error:', error)
-        relatedErrorMessage.value = "関連Thinkに取得に失敗"
+        relatedErrorMessage.value = "関連する考えを読み込めませんでした。"
     }else{
         relatedThinks.value = (data ?? [])
             .map((candidate) => ({
@@ -115,10 +115,10 @@ async function fetchThinkDetail(thinkId: number | string){
     
     if (error){
         console.error('Thinks個別データ取得Error:', error)
-        errorMessage.value = 'Thinkの取得に失敗しました。'
+        errorMessage.value = '考えを読み込めませんでした。'
     }else if (!data) {
         console.error('Thinks個別データ取得Error: データが存在しません。')
-        errorMessage.value = 'Thinkが存在しません。'
+        errorMessage.value = 'この考えは見つかりませんでした。'
     }else{
         console.log('Thinks個別データ取得成功')
         think.value = data
@@ -142,59 +142,47 @@ watch(
 
 </script>
 <template>
-    <main class="">
-        <RouterLink
-            :to="{
-                name: 'home',
-            }",
-        >
-         ← 一覧へ戻る
-        </RouterLink>
-        Thinks/Details
-        <section>
-            <!-- ここにID -->
-            <div class="" v-if="isLoading">読み込み中...</div>
-            <div class="" v-else-if="errorMessage">{{ errorMessage }}</div>
-            <div class="" v-else-if="think">
-                <h2>{{ think.text }}</h2>
+    <main id="main-content" class="detail-main page-shell">
+        <h1 class="visually-hidden">考えの詳細</h1>
+        <RouterLink class="back-link" :to="{ name: 'home' }">← 投稿一覧に戻る</RouterLink>
+
+        <div class="detail-layout">
+            <div class="detail-primary">
+                <section class="thought-card surface" aria-label="元の考え">
+                    <p v-if="isLoading" class="status" role="status">考えを読み込んでいます...</p>
+                    <p v-else-if="errorMessage" class="status status--error" role="alert">{{ errorMessage }}</p>
+                    <h2 v-else-if="think" class="thought-text">{{ think.text }}</h2>
+                </section>
+
+                <ReplyForm
+                    v-if="think"
+                    :think-id="String(think.id)"
+                    @count-change="discussCount = $event"
+                />
+                <Knowledge
+                    v-if="think"
+                    :think-id="String(think.id)"
+                    :discuss-count="discussCount"
+                    :can-manage="isThinkOwner"
+                />
             </div>
-        </section>
-        <section>
-            <h2>関連するThinks</h2>
-            <p v-if="isRelatedLoading">探しています...</p>
-            <p v-else-if="relatedErrorMessage">{{ relatedErrorMessage }}</p>
-            <p v-else-if="relatedThinks.length === 0">関連するThinkはまだありません。</p>
-            <div v-else>
-                <ul>
-                    <li
-                        v-for="relatedThink in relatedThinks"
-                        :key="relatedThink.id"
-                    >
-                        <RouterLink
-                            :to="{
-                                name: 'think-detail',
-                                params: {id: String(relatedThink.id)}
-                            }"
-                        >
-                            {{ relatedThink.text }}
-                        </RouterLink>
-                    </li>
-                </ul>
-            </div>
-        </section>
-        <section >
-            <ReplyForm
-                v-if="think"
-                :think-id="String(think.id)"
-                @count-change="discussCount = $event"
-            />
-        <!-- ここに、Knowledgeコンポーネントを配置 -->
-            <Knowledge
-                v-if="think"
-                :think-id="String(think.id)"
-                :discuss-count="discussCount"
-                :can-manage="isThinkOwner"
-            />
-        </section>
+
+            <aside class="detail-sidebar" aria-labelledby="related-title">
+                <section class="related-panel surface">
+                    <h2 id="related-title">関連する考え</h2>
+                    <p v-if="isRelatedLoading" class="status" role="status">探しています...</p>
+                    <p v-else-if="relatedErrorMessage" class="status status--error" role="alert">{{ relatedErrorMessage }}</p>
+                    <p v-else-if="relatedThinks.length === 0" class="related-empty">関連する考えはまだありません。</p>
+                    <ul v-else class="related-list">
+                        <li v-for="relatedThink in relatedThinks" :key="relatedThink.id">
+                            <RouterLink :to="{ name: 'think-detail', params: { id: String(relatedThink.id) } }">
+                                <span>{{ relatedThink.text }}</span>
+                                <span aria-hidden="true">→</span>
+                            </RouterLink>
+                        </li>
+                    </ul>
+                </section>
+            </aside>
+        </div>
     </main>
 </template>

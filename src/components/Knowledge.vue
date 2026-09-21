@@ -78,7 +78,7 @@ async function distillKnowledge() {
         openQuestions.value = data.open_questions
     } catch (error) {
         console.error('Distill実行に失敗:', error)
-        distillErrorMessage.value = '会話の蒸留に失敗しました。'
+        distillErrorMessage.value = '下書きを作れませんでした。もう一度お試しください。'
         return
     }finally{
         isDistilling.value = false
@@ -125,7 +125,7 @@ async function upsertKnowledge() {
         applyKnowledge(data)
     } catch (error) {
         console.error('Knowledge作成・更新に失敗:', error)
-        UpsertErrorMessage.value = "Knowledge作成・更新に失敗しました。"
+        UpsertErrorMessage.value = "まとめを保存できませんでした。もう一度お試しください。"
         return
     }finally{
         isUpsertLoading.value = false
@@ -155,7 +155,7 @@ async function fetchKnowledge() {
         console.log('Knowledge create Successfull')
     } catch (error) {
         console.error('Knowledgeの取得失敗:', error)
-        FetchErrorMessage.value = "knowledgeの取得に失敗しました。"
+        FetchErrorMessage.value = "まとめを読み込めませんでした。"
         return
     }finally{
         if (requestThinkId === props.thinkId){
@@ -181,38 +181,39 @@ watch(
 
 </script>
 <template>
-    <section aria-labelledby="knowledge-title">
-        <h2 id="knowledge-title">Knowledge</h2>
+    <section class="knowledge-card surface" aria-labelledby="knowledge-title">
+        <div class="section-card-head">
+            <h2 id="knowledge-title">まとめ</h2>
+        </div>
+        <p v-if="isFetchLoading" class="status" role="status">まとめを読み込んでいます...</p>
 
-        <p v-if="isFetchLoading">読み込んでます...</p>
-
-        <p v-else-if="FetchErrorMessage">{{ FetchErrorMessage }}</p>
+        <p v-else-if="FetchErrorMessage" class="status status--error" role="alert">{{ FetchErrorMessage }}</p>
 
         <template v-else>
-            <article v-if="knowledge">
-                <h3 id="current-knowledge-title">現在のKnowledge</h3>
+            <article v-if="knowledge" class="knowledge-current">
+                <h3 id="current-knowledge-title">現在のまとめ</h3>
 
-                <section>
+                <section class="knowledge-section">
                     <h4>要約</h4>
                     <p>{{ knowledge.summary }}</p>
                 </section>
 
-                <section v-if="knowledge.common_points">
+                <section v-if="knowledge.common_points" class="knowledge-section">
                     <h4>共通している点</h4>
                     <p>{{ knowledge.common_points }}</p>
                 </section>
 
-                <section v-if="knowledge.disagreements">
+                <section v-if="knowledge.disagreements" class="knowledge-section">
                     <h4>意見が分かれている点</h4>
                     <p>{{ knowledge.disagreements }}</p>
                 </section>
 
-                <section v-if="knowledge.open_questions">
+                <section v-if="knowledge.open_questions" class="knowledge-section">
                     <h4>まだ解決してないもの</h4>
                     <p>{{ knowledge.open_questions }}</p>
                 </section>
 
-                <small>
+                <small class="knowledge-date">
                     最終更新：
                     <time :datetime="knowledge.updated_at">
                         {{ formatUpdateAt(knowledge.updated_at) }}
@@ -220,31 +221,28 @@ watch(
                 </small>
             </article>
 
-            <p v-else>Knowledgeはまだありません。</p>
+            <p v-else class="knowledge-empty">まだまとめはありません。</p>
 
-            <article v-if="canManage">
+            <article v-if="canManage" class="knowledge-editor">
+                <h3>{{ knowledge ? 'まとめを編集' : 'まとめを作成' }}</h3>
                 <button
+                    class="button button--soft knowledge-distill"
                     type="button"
                     :disabled="!canDistill"
                     @click="distillKnowledge"
                 >
-                    <template v-if="isDistilling">蒸留中...</template>
-                    <template v-else-if="discussCount === null">Discussを確認中...</template>
-                    <template v-else-if="discussCount === 0">Discussを追加してください</template>
-                    <template v-else>蒸留する</template>
+                    <template v-if="isDistilling">下書きを作成中...</template>
+                    <template v-else-if="discussCount === null">会話を確認中...</template>
+                    <template v-else-if="discussCount === 0">会話が必要です</template>
+                    <template v-else>会話から下書きを作る</template>
                 </button>
     
-                <p v-if="distillErrorMessage">
+                <p v-if="distillErrorMessage" class="status status--error" role="alert">
                     {{ distillErrorMessage }}
                 </p>
     
-                <!-- 新規作成フォーム -->
-                <form @submit.prevent="upsertKnowledge">
-                    <h3>
-                        {{ knowledge ? "knowledgeを更新" : "knowledgeを作成" }}
-                    </h3>
-    
-                    <div>
+                <form class="knowledge-form" @submit.prevent="upsertKnowledge">
+                    <div class="form-field">
                         <label for="knowledge-summary">要約</label>
                         <textarea
                          :disabled="isUpsertLoading"
@@ -255,7 +253,7 @@ watch(
                         ></textarea>
                     </div>
     
-                    <div>
+                    <div class="form-field">
                         <label for="knowledge-common">共通している点</label>
                         <textarea
                          :disabled="isUpsertLoading"
@@ -265,7 +263,7 @@ watch(
                         ></textarea>
                     </div>
     
-                    <div>
+                    <div class="form-field">
                         <label for="knowledge-disagree">意見が分かれている点</label>
                         <textarea
                          :disabled="isUpsertLoading"
@@ -275,7 +273,7 @@ watch(
                         ></textarea>
                     </div>
                     
-                    <div>
+                    <div class="form-field">
                         <label for="knowledge-open-question">解決してない点</label>
                         <textarea
                          :disabled="isUpsertLoading"
@@ -285,15 +283,14 @@ watch(
                         ></textarea>
                     </div>
     
-                    <!-- ここでは、Knowledgeがあるかないかで`更新`か`送信`を判断している。 -->
                     <button
+                        class="button button--primary"
                         type="submit"
                         :disabled="isUpsertLoading || !summary.trim()"
                     >
                         {{ isUpsertLoading ? '保存中...': knowledge ? '更新する' : '送信する'}}
                     </button>
-                    <!-- エラーハンドリング -->
-                    <p v-if="UpsertErrorMessage">
+                    <p v-if="UpsertErrorMessage" class="status status--error" role="alert">
                         {{ UpsertErrorMessage }}
                     </p>
                 </form>

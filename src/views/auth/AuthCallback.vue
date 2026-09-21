@@ -6,12 +6,6 @@ import { supabase } from '../../lib/supabase';
 const router = useRouter();
 
 onMounted(async() => {
-    // const code = new URL(window.location.href).searchParams.get('code') ?? ''    
-    // const { error } = await supabase.auth.exchangeCodeForSession(code)
-
-    // const data = error ? {path: '/auth/signup', query: {AuthError: '1'}} : '/home'
-    // router.replace(data)
-
     try {
         const code = new URL(window.location.href).searchParams.get('code') ?? ''
         if (!code){
@@ -39,7 +33,11 @@ onMounted(async() => {
 })
 </script>
 <template>
-    <main>
-        <p>認証しています。。。。。</p>
+    <main id="main-content" class="callback-main page-shell">
+        <div class="callback-card surface" role="status">
+            <span class="callback-spinner" aria-hidden="true"></span>
+            <h1>認証しています</h1>
+            <p>確認が終わるまで、少しお待ちください。</p>
+        </div>
     </main>
 </template>

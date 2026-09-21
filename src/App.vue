@@ -1,79 +1,68 @@
 <script setup lang="ts">
-// import HelloWorld from './components/HelloWorld.vue'
-import { 
-  RouterView,
-  useRouter
- } from 'vue-router'
-import { onMounted, ref } from 'vue';
-import { useAuth } from './composables/useAuth';
+import { onMounted, ref } from 'vue'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { useAuth } from './composables/useAuth'
 
-const router = useRouter();
-const { 
-  user, 
-  isAuthReady, 
-  initializeAuth, 
-  signOut 
-} = useAuth();
-const isSignOut = ref(false)
-const isSignOutError = ref('')
+const router = useRouter()
+const { user, isAuthReady, initializeAuth, signOut } = useAuth()
+const isSigningOut = ref(false)
+const signOutError = ref('')
 
-
-onMounted(() =>{
+onMounted(() => {
   initializeAuth()
 })
 
 async function handleSignOut() {
-  if(isSignOut.value){
-    return
-  }
-  isSignOut.value = true
-  isSignOutError.value = ''
+  if (isSigningOut.value) return
+
+  isSigningOut.value = true
+  signOutError.value = ''
+
   try {
     await signOut()
-    await router.push({
-      name: "login"
-    })
+    await router.push({ name: 'login' })
   } catch (error) {
-    isSignOutError.value = "ログアウトできませんでした。もう一度お試しください。"
-    console.error("ログアウト失敗:", error);
-  }finally{
-    isSignOut.value = false
+    signOutError.value = 'ログアウトできませんでした。もう一度お試しください。'
+    console.error('ログアウト失敗:', error)
+  } finally {
+    isSigningOut.value = false
   }
 }
-
 </script>
 
 <template>
-  <!-- ユーザー認証用のHeader -->
-   <!-- <template>は、HTMLの中身が表示されないテンプレ保管用要素。　-->
-  <header>
-    <div>
-      <b>AnyThink</b>
-    </div>
-    <p v-if="!isAuthReady">認証状況を確認中...</p>
+  <a class="skip-link" href="#main-content">本文へ移動</a>
+  <div class="app-frame">
+    <header class="site-header">
+      <div class="header-inner">
+        <RouterLink class="brand" :to="{ name: 'index' }" aria-label="Anythink ホーム">
+          <span>Anythink</span>
+        </RouterLink>
 
-    <RouterLink 
-      v-else-if="!user"
-      type="button"
-      to="/auth/login"
-    >
-      ログイン
-    </RouterLink>
-    <button 
-      v-else
-      type="button"
-      :disabled="isSignOut"
-      @click="handleSignOut"
-    >
-     {{ isSignOut ? "ログアウト中..." : "ログアウト" }}
-    </button>
-    <p
-      v-if="isSignOutError"
-      role="alert"
-    >
-      {{ isSignOutError }}
-    </p>
-  </header>
-  <!-- ページの表示欄 -->
-  <RouterView />
+        <nav class="site-nav" aria-label="メインメニュー">
+          <RouterLink :to="{ name: 'home' }">投稿を見る</RouterLink>
+        </nav>
+
+        <div class="header-actions">
+          <span v-if="!isAuthReady" class="header-status" role="status">確認中...</span>
+          <template v-else-if="!user">
+            <RouterLink class="header-link" :to="{ name: 'login' }">ログイン</RouterLink>
+            <RouterLink class="button button--primary button--small header-signup" :to="{ name: 'signup' }">新規登録</RouterLink>
+          </template>
+          <button
+            v-else
+            class="button button--ghost button--small"
+            type="button"
+            :disabled="isSigningOut"
+            @click="handleSignOut"
+          >
+            {{ isSigningOut ? 'ログアウト中...' : 'ログアウト' }}
+          </button>
+        </div>
+      </div>
+      <p v-if="signOutError" class="header-error" role="alert">{{ signOutError }}</p>
+    </header>
+
+    <RouterView />
+  </div>
 </template>

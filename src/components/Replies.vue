@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import { RouterLink } from 'vue-router';
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from '../composables/useAuth.ts';
 
@@ -104,69 +105,43 @@ watch(
 )
 </script>
 <template>
-    <!-- <div>Discuss一覧</div>
-    <p v-if="isFetching">読み込み中...</p>
-    <p v-else-if="FetcherrorMessage">{{ FetcherrorMessage }}</p>
-    <p v-else-if="replies.length === 0">Discussがまだありません。</p>
-    <ul v-else>
-        <li v-for="reply in replies" :key="reply.id">
-            <span class="">
-                {{ reply.id }} / {{ reply.created_at }} >>> {{ reply.think_id }}
-            </span>
-            <div class="">{{ reply.text }}</div>
-        </li>
-    </ul>
-
-    <textarea v-model="text" name="" id="" class="" />
-    <button @click="PostReplies">Discuss</button> -->
-    <section aria-labelledby="discussion-title">
-        <h2 class="title" id="discussion-title">Discuss</h2>
-
-        <p v-if="isFetching">読み込み中...</p>
-
-        <p v-else-if="FetcherrorMessage">{{ FetcherrorMessage }}</p>
-
-        <p v-else-if="replies.length === 0">Discussはまだありません。</p>
-        <ul v-else>
-            <li v-for="reply in replies" :key="reply.id" class="">
-                <span class="">
-                    <p></p>
-                    <time :datetime="reply.created_at">
-                        {{ formatCreatedAt(reply?.created_at) }}
-                    </time>
-                </span>
-                <p class="">
-                    {{ reply.text }}
-                </p>
+    <section class="discussion-card surface" aria-labelledby="discussion-title">
+        <div class="section-card-head">
+            <h2 id="discussion-title">会話</h2>
+        </div>
+        <p v-if="isFetching" class="status" role="status">会話を読み込んでいます...</p>
+        <p v-else-if="FetcherrorMessage" class="status status--error" role="alert">{{ FetcherrorMessage }}</p>
+        <p v-else-if="replies.length === 0" class="discussion-empty">まだ会話はありません。最初のひとことをどうぞ。</p>
+        <ul v-else class="reply-list">
+            <li v-for="reply in replies" :key="reply.id" class="reply-item">
+                <div>
+                    <time class="reply-time" :datetime="reply.created_at">{{ formatCreatedAt(reply.created_at) }}</time>
+                    <p>{{ reply.text }}</p>
+                </div>
             </li>
         </ul>
-    </section>
-    <section>
-        <p v-if="!isAuthReady">認証確認中...</p>
-        <form v-else-if="user" @submit.prevent="PostReplies">
+
+        <p v-if="!isAuthReady" class="status" role="status">認証状況を確認しています...</p>
+        <form v-else-if="user" class="reply-form" @submit.prevent="PostReplies">
             <label for="reply-text">返信を書く</label>
-
             <textarea
-             name="reply-textarea"
-             id="reply-text"
-             v-model="text"
-             :disabled="isPosting"
-             placeholder="考えや経験を追加してください"
+                id="reply-text"
+                v-model="text"
+                name="reply-textarea"
+                :disabled="isPosting"
+                placeholder="考えや経験を書いてみましょう"
+                rows="4"
             ></textarea>
-
-            <button
-             type="submit"
-             :disabled="isPosting || !text.trim()"
-            >
-             {{ isPosting ? '投稿中...' : 'Discuss' }}
-            </button>
-
-            <p v-if="PosterrorMessage">
-                {{ PosterrorMessage }}
-            </p>
+            <div class="reply-form-footer">
+                <p v-if="PosterrorMessage" class="status status--error" role="alert">{{ PosterrorMessage }}</p>
+                <button class="button button--primary" type="submit" :disabled="isPosting || !text.trim()">
+                    {{ isPosting ? '投稿中...' : '投稿する' }}
+                </button>
+            </div>
         </form>
-        <p v-else>
-            Discussするにはログインしてください。
-        </p>
+        <div v-else class="reply-guest">
+            <p>返信するにはログインが必要です。</p>
+            <RouterLink class="text-link" :to="{ name: 'login' }">ログイン</RouterLink>
+        </div>
     </section>
 </template>

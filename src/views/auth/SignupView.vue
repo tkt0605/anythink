@@ -61,46 +61,46 @@ async function AuthSignup() {
 
 </script>
 <template>
-    <main>
-        <h1>新規登録</h1>
+    <main id="main-content" class="auth-main page-shell">
+        <div class="auth-layout">
+            <section class="auth-card surface" aria-labelledby="auth-title">
+                <h1 id="auth-title">新規登録</h1>
+                <p class="auth-description">メールアドレスとパスワードを設定してください。</p>
 
-        <form @submit.prevent="AuthSignup">
-            <label for="auth-email">メールアドレス</label>
-            <input
-                type="email"
-                id="auth-email"
-                v-model="email"
-                autocomplete="email"
-                :disabled="isSending"
-                required
-            />
-            <label for="auth-pass">パスワード</label>
-            <input
-                type="password"
-                id="auth-pass"
-                v-model="password"
-                autocomplete="password"
-                :disabled="isSending"
-                required
-            />
-            <button
-                type="submit"
-                :disabled="isSending || isSent || !email.trim()"
-            >
-                {{ isSending ? "送信中..." : isSent ? "送信済み" : "新規アカウント作成" }}
-            </button>
-        </form>
-        <p v-if="isSent">
-            認証メールを送信しました。
-            メール内のリンクを開いてください。
-        </p>
+                <form class="auth-form" @submit.prevent="AuthSignup">
+                    <div class="form-field">
+                        <label for="auth-email">メールアドレス</label>
+                        <input
+                            id="auth-email"
+                            v-model="email"
+                            type="email"
+                            autocomplete="email"
+                            placeholder="name@example.com"
+                            :disabled="isSending || isSent"
+                            required
+                        />
+                    </div>
+                    <div class="form-field">
+                        <label for="auth-pass">パスワード</label>
+                        <input
+                            id="auth-pass"
+                            v-model="password"
+                            type="password"
+                            autocomplete="new-password"
+                            placeholder="パスワードを設定"
+                            :disabled="isSending || isSent"
+                            required
+                        />
+                    </div>
+                    <p v-if="errorMessage" class="status status--error" role="alert">{{ errorMessage }}</p>
+                    <p v-if="isSent" class="status status--success" role="status">確認メールを送信しました。メール内のリンクを開いてください。</p>
+                    <button class="button button--primary auth-submit" type="submit" :disabled="isSending || isSent || !email.trim() || !password">
+                        {{ isSending ? '送信中...' : isSent ? '送信済み' : 'アカウントを作成' }}
+                    </button>
+                </form>
 
-        <p v-if="errorMessage" role="alert">
-            {{ errorMessage }}
-        </p>
-        
-        <div>
-            既に、アカウントをお持ちの方は<RouterLink to="/auth/login">こちら</RouterLink>です。
+                <p class="auth-switch">すでにアカウントをお持ちの方は <RouterLink :to="{ name: 'login' }">ログインへ</RouterLink></p>
+            </section>
         </div>
     </main>
 </template>
