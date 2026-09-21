@@ -230,3 +230,19 @@ alter table public.thinks
 alter table public.replies
     alter column user_id set default auth.uid(),
     alter column user_id set not null;
+
+
+-- 第7次テスト/pgvector有効化とthinks.embedding追加
+-- pgvectorが使用するスキーマ
+create schema if not exists extensions;
+
+-- pgvectorを有効化
+create extension if not exists vector
+    with schema extensions;
+
+-- Thinkに256次元のEmbedingを保持できるようにする
+alter table public.thinks
+    add column if not exists embedding extensions.vector(256);
+
+comment on column public.thinks.embedding is 
+    'voyage-4-nanoで生成した256次元のEmbedding';
