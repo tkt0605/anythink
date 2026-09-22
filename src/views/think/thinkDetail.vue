@@ -16,7 +16,13 @@ type ThinkDetail = Think&{
 }
 
 type RelatedThink = Think & {
-    similarity: number | string
+    similarity: number
+    related_probability?: number | null
+}
+
+type RankRelatedThinksResponse = {
+    related_thinks: RelatedThink[]
+    ranking_method: 'jev' | 'voyage_fallback'
 }
 const { user } = useAuth();
 const   think = ref<ThinkDetail | null>(null)
@@ -36,92 +42,66 @@ const isThinkOwner = computed(() => {
     )
 })
 
-// function createBigrams(text: string): Set<string>{
-//     const normalizedText = text
-//         .toLocaleLowerCase()
-//         .replace(/[^\p{L}\p{N}]+/gu, '')
-    
-//     const characters = [...normalizedText]
-//     if (characters.length === 0){
-//         return new Set()
-//     }
-//     if (characters.length === 1){
-//         return new Set(characters)
-//     }
-//     const bigrams = new Set<string>()
-//     for (let index = 0; index < characters.length -1; index++){
-//         bigrams.add(characters[index] + characters[index + 1])
-//     }
-//     return bigrams
+async function fetchVoyageRelatedThinks(
+    sourceThinkId: string
+): Promise<RelatedThink[]> {
+    const { data, error } = await supabase.rpc('match_thinks', {
+        source_think_id: sourceThinkId,
+        match_count: 3,
+        match_threshold: 0
+    })
 
-// }
+    if (error) {
+        throw error
+    }
 
-// function calculateSimilarity(currentText: string, candidateText: string): number{
-//     const currentBigrams = createBigrams(currentText)
-//     const candidateBigrams = createBigrams(candidateText)
-
-//     if (currentBigrams.size === 0 || candidateBigrams.size === 0){
-//         return 0
-//     }
-//     let matchingCount = 0
-//     for (const bigram of currentBigrams){
-//         if (candidateBigrams.has(bigram)){
-//             matchingCount++
-//         }
-//     }
-//     return matchingCount / Math.max(
-//         currentBigrams.size,
-//         candidateBigrams.size
-//     )
-// }
-
-
-// async function fetchRelatedThinkss(currentThink: Think){
-//     isRelatedLoading.value = true
-//     relatedErrorMessage.value = ''
-//     relatedThinks.value = []
-
-//     const { data, error } = await supabase.from('thinks')
-//         .select('id, text')
-//         .neq('id', currentThink.id)
-//         .limit(100)
-//     if (error){
-//         console.error('Thinks関連データ取得Error:', error)
-//         relatedErrorMessage.value = "関連する考えを読み込めませんでした。"
-//     }else{
-//         relatedThinks.value = (data ?? [])
-//             .map((candidate) => ({
-//                 think: candidate,
-//                 score: calculateSimilarity(
-//                     currentThink.text,
-//                     candidate.text
-//                 )
-//             }))
-//             .filter(({score}) => score > 0)
-//             .sort((left, right) => right.score - left.score)
-//             .slice(0, 3)
-//             .map(({think}) => think)    
-//     }
-//     isRelatedLoading.value = false
-// }
+    return (data ?? []) as RelatedThink[]
+}
 
 async function fetchRelatedThinks(sourceThinkId: string) {
     isRelatedLoading.value = true
     relatedErrorMessage.value = ''
     relatedThinks.value = []
-    const { data, error } = await supabase.rpc('match_thinks', {
-        source_think_id: sourceThinkId,
-        match_count: 3,
-        match_threshold: 0
-    });
-    if(error){
-        console.error('Thinks関連データ取得Error:')
-        relatedErrorMessage.value = "関連する考えを読み込めませんでした。"    
-        throw error
-    }else{
-        relatedThinks.value = ( data ?? []) as RelatedThink[]
+
+    try {
+        const {
+            data: { session },
+            error: sessionError
+        } = await supabase.auth.getSession()
+
+        if (sessionError) {
+            throw sessionError
+        }
+
+        if (session) {
+            const { data, error } =
+                await supabase.functions.invoke<RankRelatedThinksResponse>(
+                    'rank-related-thinks',
+                    {
+                        body: {
+                            sourceThinkId
+                        }
+                    }
+                )
+
+            if (!error && data) {
+                relatedThinks.value = data.related_thinks
+                return
+            }
+
+            console.warn(
+                'Jev再ランキングを利用できないため、Voyage検索へ切り替えます。',
+                error
+            )
+        }
+
+        relatedThinks.value = await fetchVoyageRelatedThinks(sourceThinkId)
+    } catch (error) {
+        console.error('Thinks関連データ取得Error:', error)
+        relatedErrorMessage.value = '関連する考えを読み込めませんでした。'
+    } finally {
+        isRelatedLoading.value = false
     }
-    isRelatedLoading.value = false
 }
 
 async function fetchThinkDetail(thinkId: string){

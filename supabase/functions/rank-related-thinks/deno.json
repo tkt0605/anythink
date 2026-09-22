@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "@supabase/functions-js": "jsr:@supabase/functions-js@^2",
+    "@supabase/server": "npm:@supabase/server@^1",
+    "@typesafe-ai/sdk": "npm:@typesafe-ai/sdk@^0.6.0"
+  }
+}

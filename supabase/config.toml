@@ -424,3 +424,9 @@ entrypoint = "./functions/distill-knowledge/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/distill-knowledge/*.html" ]
+
+[functions.rank-related-thinks]
+enabled = true
+verify_jwt = true
+import_map = "./functions/rank-related-thinks/deno.json"
+entrypoint = "./functions/rank-related-thinks/index.ts"
