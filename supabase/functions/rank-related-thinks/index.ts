@@ -23,6 +23,19 @@ type RankedThink = MatchedThink & {
   related_probability: number | null
 }
 
+type RankingDebug = {
+  voyage_candidate_count: number
+  jev_answer_count: number | null
+  jev_matched_count: number | null
+  returned_count: number
+  scores: Array<{
+    id: string
+    voyage_similarity: number
+    related_probability: number | null
+    passed_threshold: boolean | null
+  }>
+}
+
 function voyageFallback(candidates: MatchedThink[]): RankedThink[] {
   return candidates.slice(0, RELATED_THINK_COUNT).map((candidate) => ({
     ...candidate,
@@ -31,11 +44,28 @@ function voyageFallback(candidates: MatchedThink[]): RankedThink[] {
 }
 
 function fallbackResponse(candidates: MatchedThink[], reason: string) {
+  const relatedThinks = voyageFallback(candidates)
+  const debug: RankingDebug = {
+    voyage_candidate_count: candidates.length,
+    jev_answer_count: null,
+    jev_matched_count: null,
+    returned_count: relatedThinks.length,
+    scores: candidates.map((candidate) => ({
+      id: candidate.id,
+      voyage_similarity: candidate.similarity,
+      related_probability: null,
+      passed_threshold: null,
+    })),
+  }
+
+  console.info('関連Thinkデバッグ:', JSON.stringify({ reason, ...debug }))
+
   return Response.json({
-    related_thinks: voyageFallback(candidates),
+    related_thinks: relatedThinks,
     ranking_method: 'voyage_fallback',
     rerank_reason: reason,
     threshold: RELATED_PROBABILITY_THRESHOLD,
+    debug,
   })
 }
 
@@ -118,11 +148,22 @@ export default {
         const candidates = (data ?? []) as MatchedThink[]
 
         if (candidates.length === 0) {
+          const debug: RankingDebug = {
+            voyage_candidate_count: 0,
+            jev_answer_count: 0,
+            jev_matched_count: 0,
+            returned_count: 0,
+            scores: [],
+          }
+
+          console.info('関連Thinkデバッグ:', JSON.stringify(debug))
+
           return Response.json({
             related_thinks: [],
             ranking_method: 'jev',
             model: TYPESAFE_MODEL,
             threshold: RELATED_PROBABILITY_THRESHOLD,
+            debug,
           })
         }
 
@@ -169,30 +210,56 @@ export default {
             questions,
           })
 
-          const relatedThinks = candidates
+          const scoredCandidates = candidates
             .map((candidate, index): RankedThink => ({
               ...candidate,
               related_probability:
                 result.answers[`candidate_${index}`]?.noul ?? 0,
             }))
-            .filter(
-              (candidate) =>
-                candidate.related_probability !== null &&
-                candidate.related_probability >= RELATED_PROBABILITY_THRESHOLD,
-            )
             .sort(
               (left, right) =>
                 (right.related_probability ?? 0) -
                   (left.related_probability ?? 0) ||
                 right.similarity - left.similarity,
             )
+
+          const relatedThinks = scoredCandidates
+            .filter(
+              (candidate) =>
+                candidate.related_probability !== null &&
+                candidate.related_probability >= RELATED_PROBABILITY_THRESHOLD,
+            )
             .slice(0, RELATED_THINK_COUNT)
+
+          const matchedCount = scoredCandidates.filter(
+            (candidate) =>
+              candidate.related_probability !== null &&
+              candidate.related_probability >= RELATED_PROBABILITY_THRESHOLD,
+          ).length
+
+          const debug: RankingDebug = {
+            voyage_candidate_count: candidates.length,
+            jev_answer_count: Object.keys(result.answers).length,
+            jev_matched_count: matchedCount,
+            returned_count: relatedThinks.length,
+            scores: scoredCandidates.map((candidate) => ({
+              id: candidate.id,
+              voyage_similarity: candidate.similarity,
+              related_probability: candidate.related_probability,
+              passed_threshold:
+                candidate.related_probability !== null &&
+                candidate.related_probability >= RELATED_PROBABILITY_THRESHOLD,
+            })),
+          }
+
+          console.info('関連Thinkデバッグ:', JSON.stringify(debug))
 
           return Response.json({
             related_thinks: relatedThinks,
             ranking_method: 'jev',
             model: result.model,
             threshold: RELATED_PROBABILITY_THRESHOLD,
+            debug,
           })
         } catch (error) {
           console.error('Jev再ランキング失敗:', error)

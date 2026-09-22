@@ -20,9 +20,26 @@ type RelatedThink = Think & {
     related_probability?: number | null
 }
 
+type RankingDebug = {
+    voyage_candidate_count: number
+    jev_answer_count: number | null
+    jev_matched_count: number | null
+    returned_count: number
+    scores: Array<{
+        id: string
+        voyage_similarity: number
+        related_probability: number | null
+        passed_threshold: boolean | null
+    }>
+}
+
 type RankRelatedThinksResponse = {
     related_thinks: RelatedThink[]
     ranking_method: 'jev' | 'voyage_fallback'
+    threshold: number
+    model?: string
+    rerank_reason?: string
+    debug?: RankingDebug
 }
 const { user } = useAuth();
 const   think = ref<ThinkDetail | null>(null)
@@ -33,6 +50,7 @@ const isRelatedLoading = ref(false)
 const errorMessage = ref('')
 const relatedErrorMessage = ref('')
 const discussCount = ref<number | null>(null)
+const relatedThreshold = ref<number | null>(null)
 
 const isThinkOwner = computed(() => {
     return (
@@ -84,15 +102,47 @@ async function fetchRelatedThinks(sourceThinkId: string) {
                     }
                 )
 
-            if (!error && data) {
+            if (data) {
+                console.groupCollapsed('関連Thinkデバッグ')
+                console.info('判定方法:', data.ranking_method)
+                console.info('Jevモデル:', data.model ?? '未使用')
+                console.info('通過閾値:', `${data.threshold * 100}%`)
+
+                if (data.rerank_reason) {
+                    console.info('Voyageフォールバック理由:', data.rerank_reason)
+                }
+
+                if (data.debug) {
+                    console.info('Voyage候補数:', data.debug.voyage_candidate_count)
+                    console.info('Jev回答数:', data.debug.jev_answer_count)
+                    console.info('閾値通過数:', data.debug.jev_matched_count)
+                    console.info('画面へ返した件数:', data.debug.returned_count)
+                    console.table(data.debug.scores)
+                } else {
+                    console.info('デバッグ情報なし（デプロイ済みFunctionは旧版の可能性があります）')
+                }
+
+                console.groupEnd()
+            }
+
+            if (
+                !error &&
+                data &&
+                Array.isArray(data.related_thinks)
+            ) {
                 relatedThinks.value = data.related_thinks
                 return
             }
-
-            console.warn(
-                'Jev再ランキングを利用できないため、Voyage検索へ切り替えます。',
-                error
-            )
+            if(error){
+                console.warn(
+                    'Jev再ランキングでエラーが発生。Voyage検索へ切り替えます。',
+                    error
+                )
+            }else{
+                console.warn('Jevランキングの結果が0件だったため、Voyage検索へ切り替えます。')
+            }
+            relatedThinks.value = await fetchVoyageRelatedThinks(sourceThinkId)
+            return
         }
 
         relatedThinks.value = await fetchVoyageRelatedThinks(sourceThinkId)
@@ -169,8 +219,8 @@ watch(
                 />
             </div>
 
-            <aside class="detail-sidebar" aria-labelledby="related-title">
-                <section class="related-panel surface">
+            <section class="detail-sidebar" aria-labelledby="related-title">
+                <div class="related-panel surface">
                     <h2 id="related-title">関連する考え</h2>
                     <p v-if="isRelatedLoading" class="status" role="status">探しています...</p>
                     <p v-else-if="relatedErrorMessage" class="status status--error" role="alert">{{ relatedErrorMessage }}</p>
@@ -179,12 +229,15 @@ watch(
                         <li v-for="relatedThink in relatedThinks" :key="relatedThink.id">
                             <RouterLink :to="{ name: 'think-detail', params: { id: String(relatedThink.id) } }">
                                 <span>{{ relatedThink.text }}</span>
-                                <span aria-hidden="true">→</span>
+                                <span v-if="relatedThreshold">
+                                    マッチ率
+                                    {{ Math.round(relatedThreshold * 100) }}%
+                                </span>
                             </RouterLink>
                         </li>
                     </ul>
-                </section>
-            </aside>
+                </div>
+            </section>
         </div>
     </main>
 </template>
