@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 
 type Knowledge = {
@@ -17,7 +18,20 @@ type DistillResponse = {
     summary: string,
     common_points: string,
     disagreements: string,
-    open_questions: string
+    open_questions: string,
+    cached: boolean,
+    reply_count: number,
+    generated_at: string,
+    remaining_requests?: number
+}
+type DistillErrorResponse = {
+    error?: string,
+    code?: string,
+    retry_after_seconds?: number
+}
+type DistillStatus = {
+    reply_count: number,
+    generated_at: string
 }
 const props = defineProps<{
     thinkId: string
@@ -39,15 +53,75 @@ const FetchErrorMessage = ref('')
 
 const isDistilling = ref(false)
 const distillErrorMessage = ref('')
+const isDistillStatusLoading = ref(false)
+const isDistillStatusReady = ref(false)
+const lastDistilledReplyCount = ref<number | null>(null)
+
+const hasNewDiscussion = computed(() => {
+    if (props.discussCount === null || props.discussCount === 0) return false
+    return props.discussCount > (lastDistilledReplyCount.value ?? 0)
+})
 
 const canDistill = computed(() => {
     return (
         props.canManage &&
-        (props.discussCount ?? 0) > 0 &&
+        isDistillStatusReady.value &&
+        hasNewDiscussion.value &&
         !isDistilling.value
     )
 })
 
+function formatRetryAfter(seconds?: number) {
+    if (!seconds || seconds <= 0) return ''
+    if (seconds < 60) return `${Math.ceil(seconds)}秒後にもう一度お試しください。`
+    return `約${Math.ceil(seconds / 60)}分後にもう一度お試しください。`
+}
+
+async function getDistillError(error: unknown) {
+    if (!(error instanceof FunctionsHttpError)) {
+        return { status: 0, payload: null }
+    }
+
+    const response = error.context as Response
+    let payload: DistillErrorResponse | null = null
+    try {
+        payload = await response.json() as DistillErrorResponse
+    } catch {
+        // The generic message below is used when the response is not JSON.
+    }
+    return { status: response.status, payload }
+}
+
+async function fetchDistillStatus() {
+    const requestThinkId = props.thinkId
+    lastDistilledReplyCount.value = null
+    isDistillStatusReady.value = false
+    distillErrorMessage.value = ''
+
+    if (!props.canManage) return
+
+    isDistillStatusLoading.value = true
+    try {
+        const { data, error } = await supabase
+            .rpc('get_distill_status', { p_think_id: requestThinkId })
+            .maybeSingle<DistillStatus>()
+
+        if (error) throw error
+        if (requestThinkId !== props.thinkId) return
+
+        lastDistilledReplyCount.value = data?.reply_count ?? null
+        isDistillStatusReady.value = true
+    } catch (error) {
+        console.error('Distill状態の取得に失敗:', error)
+        if (requestThinkId === props.thinkId) {
+            distillErrorMessage.value = '下書きの生成状態を確認できませんでした。'
+        }
+    } finally {
+        if (requestThinkId === props.thinkId) {
+            isDistillStatusLoading.value = false
+        }
+    }
+}
 
 async function distillKnowledge() {
     if(!canDistill.value){
@@ -76,9 +150,23 @@ async function distillKnowledge() {
         commonPoints.value = data.common_points
         disAgreeMents.value = data.disagreements
         openQuestions.value = data.open_questions
+        lastDistilledReplyCount.value = data.reply_count
+        isDistillStatusReady.value = true
     } catch (error) {
         console.error('Distill実行に失敗:', error)
-        distillErrorMessage.value = '下書きを作れませんでした。もう一度お試しください。'
+        const { status, payload } = await getDistillError(error)
+        const retryMessage = formatRetryAfter(payload?.retry_after_seconds)
+
+        if (status === 409 || payload?.code === 'distill_in_progress') {
+            distillErrorMessage.value = `現在生成中です。${retryMessage}`
+        } else if (status === 429) {
+            const limitMessage = payload?.error ?? '蒸留の回数制限に達しました。'
+            distillErrorMessage.value = `${limitMessage}${retryMessage}`
+        } else if (status === 403) {
+            distillErrorMessage.value = 'このThinkを蒸留する権限がありません。'
+        } else {
+            distillErrorMessage.value = '下書きを作れませんでした。もう一度お試しください。'
+        }
         return
     }finally{
         isDistilling.value = false
@@ -179,6 +267,14 @@ watch(
     { immediate: true }
 )
 
+watch(
+    [() => props.thinkId, () => props.canManage],
+    () => {
+        fetchDistillStatus()
+    },
+    { immediate: true }
+)
+
 </script>
 <template>
     <section class="knowledge-card surface" aria-labelledby="knowledge-title">
@@ -232,10 +328,24 @@ watch(
                     @click="distillKnowledge"
                 >
                     <template v-if="isDistilling">下書きを作成中...</template>
+                    <template v-else-if="isDistillStatusLoading">生成状態を確認中...</template>
                     <template v-else-if="discussCount === null">会話を確認中...</template>
                     <template v-else-if="discussCount === 0">会話が必要です</template>
+                    <template v-else-if="knowledge">新しい会話から下書きを更新</template>
                     <template v-else>会話から下書きを作る</template>
                 </button>
+
+                <p
+                    v-if="
+                        isDistillStatusReady &&
+                        discussCount !== null &&
+                        discussCount > 0 &&
+                        !hasNewDiscussion
+                    "
+                    class="status"
+                >
+                    新しい会話が追加されると再生成できます
+                </p>
     
                 <p v-if="distillErrorMessage" class="status status--error" role="alert">
                     {{ distillErrorMessage }}
