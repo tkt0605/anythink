@@ -246,3 +246,75 @@ alter table public.thinks
 
 comment on column public.thinks.embedding is 
     'voyage-4-liteで生成した256次元のEmbedding';
+
+-- 第８次テスト
+-- 旧Embedding受け渡し方式のRPCの削除
+drop function if exists public.match_thinks(
+    extensions.vector,
+    uuid,
+    integer
+);
+
+create or replace function public.match_thinks(
+    source_think_id uuid,
+    match_count integer default 3,
+    match_threshold double precision default 0.0
+)
+
+returns table (
+    id uuid,
+    text text,
+    similarity double precision
+)
+
+language sql
+stable
+security invoker
+set search_path = public, extensions
+as $$
+    with source_think as (
+        select source.embedding
+        from public.thinks as source
+        where source.id = source_think_id
+            and source.embedding is not null
+    )
+    select 
+        candidate.id,
+        candidate.text,
+        1 - (
+            candidate.embedding <=> source_think.embedding
+        ) as similarity
+    from public.thinks as candidate
+    cross join source_think
+    where candidate.id <> source_think_id
+        and candidate.embedding is not null
+        and 1 - (
+            candidate.embedding <=> source_think.embedding
+        ) >= coalesce(match_threshold, 0.0)
+    order by candidate.embedding <=> source_think.embedding
+    limit least(
+        greatest(coalesce(match_count, 3), 1),
+        20
+    );
+$$;
+
+comment on function public.match_thinks(
+    uuid,
+    integer,
+    double precision
+) is 
+    'Think IDを受け取り、RLSで閲覧可能なThinkからコサイン類似度順に返す';
+
+revoke all 
+on function public.match_thinks(
+    uuid, 
+    integer,
+    double precision
+) from public;
+
+grant execute
+on function public.match_thinks(
+    uuid,
+    integer,
+    double precision
+) to anon, authenticated;
