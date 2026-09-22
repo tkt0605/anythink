@@ -245,4 +245,4 @@ alter table public.thinks
     add column if not exists embedding extensions.vector(256);
 
 comment on column public.thinks.embedding is 
-    'voyage-4-nanoで生成した256次元のEmbedding';
+    'voyage-4-liteで生成した256次元のEmbedding';

@@ -33,7 +33,7 @@ async function generateEmbedding(
                 },
                 body: JSON.stringify({
                     input: [text],
-                    model: 'voyage-4-nano',
+                    model: 'voyage-4-lite',
                     input_type: 'document',
                     output_dimension: EMBEDDING_DIMENSION,
                     output_dtype: 'float'

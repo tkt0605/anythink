@@ -11,7 +11,10 @@ type Think = {
     text: string
     is_public: boolean
 }
-
+type CreateThinkResponse = {
+    think: Think
+    embedding_created: boolean
+}
 // type Visibility = 'public' | 'private'
 
 // const visibility = ref<Visibility>('public')
@@ -41,16 +44,31 @@ async function createThinks() {
     errorMessage.value = ""
 
     try {
-        const { error } = await supabase
-            .from('thinks')
-            .insert({
-                text: trimmedText,
-                is_public: !isPrivate.value
-            })
-        if(error) throw error
+        const { data, error } = await supabase.functions.invoke<CreateThinkResponse>(
+            'create-think',
+            {
+                body: {
+                    text: trimmedText,
+                    is_public: !isPrivate.value
+                },
+            },
+        )
+        if(error){
+            throw error
+        }
+        if(!data?.think){
+            throw new Error("作成されたThinkが返されませんでした。");
+        }
+        if(!data.embedding_created){
+            console.warn(
+                'Thinkは作成されました。しかし、Embeddingは生成されませんでした。'
+            )
+        }
+
         text.value = ""
         isPrivate.value = false
-        await fetchThinks()
+        // await fetchThinks()
+        thinks.value.unshift(data.think)
     } catch (error) {
         console.error('Error Creating Error:', error)
         errorMessage.value = "投稿できませんでした。もう一度お試しください。"

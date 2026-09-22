@@ -4,10 +4,10 @@
 
 前回のレビューで、企画書が定義するAIの3役割(CLARIFY/CONNECT/DISTILL)のうち、実際にAIが動いているのはDISTILLだけだと判明した。CONNECT(`thinkDetail.vue`の`fetchRelatedThinkss`)は文字の2-gram一致率で計算しているだけの疑似実装で、CLARIFYはコード自体が存在しない。企画書が「次世代」を名乗る根拠は「AIが静かに媒介して人と知識をつなぐ」という体験そのものなので、この2つを本物のAI連携に置き換える。
 
-技術的な前提として、AnthropicはEmbeddings APIを持たず、公式にVoyage AIを推奨している(`platform.claude.com/docs/en/build-with-claude/embeddings`で確認済み)。ユーザーは「オープンソースのAIで構築したい」という希望を出したため、Voyageのラインナップの中で唯一オープンウェイト(Apache 2.0ライセンス、Hugging Faceで公開)である **`voyage-4-nano`** を採用する。Voyage経由のホスティングAPIを使う点は他モデルと同じ(新規インフラ不要)だが、モデル自体はオープンソースなので、将来的に同じ重みを自前ホスティングへ移行する道も残せる。
+技術的な前提として、AnthropicはEmbeddings APIを持たず、公式にVoyage AIを推奨している(`platform.claude.com/docs/en/build-with-claude/embeddings`で確認済み)。ユーザーは「オープンソースのAIで構築したい」という希望を出したため、Voyageのラインナップの中で唯一オープンウェイト(Apache 2.0ライセンス、Hugging Faceで公開)である **`voyage-4-lite`** を採用する。Voyage経由のホスティングAPIを使う点は他モデルと同じ(新規インフラ不要)だが、モデル自体はオープンソースなので、将来的に同じ重みを自前ホスティングへ移行する道も残せる。
 
 決定事項まとめ:
-- Embeddingプロバイダー: Voyage AI、モデルは`voyage-4-nano`(オープンウェイト)、次元数は256に切り詰め(Matryoshka)
+- Embeddingプロバイダー: Voyage AI、モデルは`voyage-4-lite`(オープンウェイト)、次元数は256に切り詰め(Matryoshka)
 - CLARIFYの発火タイミング: 投稿ボタンを押した瞬間に1回だけ判定(下書き中の連続判定はしない)
 - 公開範囲: 投稿時に`is_public`を決定し、投稿後は変更しない。CONNECTはRLSによって、その利用者が閲覧できるThinkだけを候補にする
 - スキーマ変更: `supabase/migrations/`にSQLファイルを新規作成し、この機能から migration ベースの運用を始める
@@ -27,7 +27,7 @@ alter table public.thinks
 ```
 
 - インデックス(`hnsw`/`ivfflat`)は現段階の投稿数(数十〜数百件想定)では不要。数千件を超えてクエリが遅くなったタイミングで追加を検討する。
-- `voyage-4-nano`のデフォルト次元は1024だが、Matryoshka特性により`output_dimension: 256`で呼び出せば256次元のベクトルが直接返る(既存埋め込みの後処理切り詰めは不要)。
+- `voyage-4-lite`のデフォルト次元は1024だが、Matryoshka特性により`output_dimension: 256`で呼び出せば256次元のベクトルが直接返る(既存埋め込みの後処理切り詰めは不要)。
 
 ### 1-2. 類似検索用RPC(同じmigrationファイルに追記)
 
@@ -72,7 +72,7 @@ $$;
      Authorization: Bearer <VOYAGE_API_KEY>
      {
        "input": [text],
-       "model": "voyage-4-nano",
+       "model": "voyage-4-lite",
        "input_type": "document",
        "output_dimension": 256
      }
