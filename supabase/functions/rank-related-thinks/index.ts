@@ -9,7 +9,7 @@ import {
 const TYPESAFE_MODEL = 'jev-latest'
 const VOYAGE_CANDIDATE_COUNT = 10
 const RELATED_THINK_COUNT = 3
-const RELATED_PROBABILITY_THRESHOLD = 0.7
+const RELATED_PROBABILITY_THRESHOLD = 0.4
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -156,6 +156,7 @@ export default {
             scores: [],
           }
 
+          // 本番デプロイする時に、ログは残さない。 
           console.info('関連Thinkデバッグ:', JSON.stringify(debug))
 
           return Response.json({
@@ -187,17 +188,30 @@ export default {
           const questions: Record<string, NoulQuestion> = {}
 
           candidates.forEach((candidate, index) => {
+            // questions[`candidate_${index}`] = noul(
+            //   {
+            //     candidate_think: candidate.text,
+            //     question:
+            //       'source_thinkとcandidate_thinkを一緒に読むことで、利用者の思考・理解・会話が具体的に発展する関係にありますか？',
+            //   },
+            //   {
+            //     true:
+            //       '同じ問題、補完関係、具体例、反論、原因と結果など、両者をつなぐ明確な意味上の関係がある。',
+            //     false:
+            //       '表面的な単語や一般的な話題が似ているだけで、両者を一緒に読む具体的な価値がない。',
+            //   },
+            // )
             questions[`candidate_${index}`] = noul(
               {
                 candidate_think: candidate.text,
                 question:
-                  'source_thinkとcandidate_thinkを一緒に読むことで、利用者の思考・理解・会話が具体的に発展する関係にありますか？',
+                'source_thinkとcandidate_thinkの間に、共通テーマ、連想、補完、対比、原因と結果、応用など、利用者が関連する考えとして一緒に読む価値のある関係がありますか？',
               },
               {
                 true:
-                  '同じ問題、補完関係、具体例、反論、原因と結果など、両者をつなぐ明確な意味上の関係がある。',
+                '直接同じ問題を扱っていなくても、共通するテーマや概念がある、発想を広げられる、新規アイデアや発明を手助けできるような創造性に長けているか、別の視点を与える、補完・対比・具体例になるなど、自然に接続できる関係がある。',
                 false:
-                  '表面的な単語や一般的な話題が似ているだけで、両者を一緒に読む具体的な価値がない。',
+                '主題や意図がほとんど無関係で、追加の説明がなければ両者を接続する理由を見いだせない。',
               },
             )
           })

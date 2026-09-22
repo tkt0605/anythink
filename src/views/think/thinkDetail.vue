@@ -50,7 +50,6 @@ const isRelatedLoading = ref(false)
 const errorMessage = ref('')
 const relatedErrorMessage = ref('')
 const discussCount = ref<number | null>(null)
-const relatedThreshold = ref<number | null>(null)
 
 const isThinkOwner = computed(() => {
     return (
@@ -133,13 +132,15 @@ async function fetchRelatedThinks(sourceThinkId: string) {
                 relatedThinks.value = data.related_thinks
                 return
             }
-            if(error){
+            if (error) {
                 console.warn(
                     'Jev再ランキングでエラーが発生。Voyage検索へ切り替えます。',
                     error
                 )
-            }else{
-                console.warn('Jevランキングの結果が0件だったため、Voyage検索へ切り替えます。')
+            } else {
+                console.warn(
+                    'Jev再ランキングのレスポンス形式が不正なため、Voyage検索へ切り替えます。'
+                )
             }
             relatedThinks.value = await fetchVoyageRelatedThinks(sourceThinkId)
             return
@@ -227,11 +228,14 @@ watch(
                     <p v-else-if="relatedThinks.length === 0" class="related-empty">関連する考えはまだありません。</p>
                     <ul v-else class="related-list">
                         <li v-for="relatedThink in relatedThinks" :key="relatedThink.id">
-                            <RouterLink :to="{ name: 'think-detail', params: { id: String(relatedThink.id) } }">
+                            <RouterLink :to="{ name: 'think-detail', params: { id: relatedThink.id } }">
                                 <span>{{ relatedThink.text }}</span>
-                                <span v-if="relatedThreshold">
+                                <span v-if="
+                                    relatedThink.related_probability !== null &&
+                                    relatedThink.related_probability !== undefined
+                                ">
                                     マッチ率
-                                    {{ Math.round(relatedThreshold * 100) }}%
+                                    {{ Math.round(relatedThink.related_probability * 100) }}%
                                 </span>
                             </RouterLink>
                         </li>
