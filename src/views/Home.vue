@@ -4,6 +4,8 @@ import { supabase } from '../lib/supabase.ts'
 import { RouterLink } from 'vue-router' 
 
 import { useAuth } from '../composables/useAuth.ts'
+import CodeTextarea from '../components/CodeTextarea.vue'
+import FormattedText from '../components/FormattedText.vue'
 
 // Think型の定義
 type Think = {
@@ -118,7 +120,7 @@ onMounted(fetchThinks)
                 <p v-if="!isAuthReady" class="status" role="status">認証状況を確認しています...</p>
                 <form v-else-if="user" class="composer-form" @submit.prevent="createThinks">
                     <label class="visually-hidden" for="think-text">考えを書く</label>
-                    <textarea
+                    <CodeTextarea
                         id="think-text"
                         v-model="text"
                         placeholder="思いついたことを書く"
@@ -191,7 +193,7 @@ onMounted(fetchThinks)
                                 </svg>
                                 非公開
                             </small>
-                            <span class="think-card-text">{{ think.text }}</span>
+                            <FormattedText class="think-card-text" :text="think.text" />
                             <span class="think-card-bottom">会話を見る</span>
                         </RouterLink>
                     </li>

@@ -3,6 +3,8 @@ import { ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import { supabase } from '../lib/supabase.ts'
 import { useAuth } from '../composables/useAuth.ts';
+import CodeTextarea from './CodeTextarea.vue';
+import FormattedText from './FormattedText.vue';
 
 type Replies ={
     id: number | string
@@ -116,7 +118,7 @@ watch(
             <li v-for="reply in replies" :key="reply.id" class="reply-item">
                 <div>
                     <time class="reply-time" :datetime="reply.created_at">{{ formatCreatedAt(reply.created_at) }}</time>
-                    <p>{{ reply.text }}</p>
+                    <FormattedText :text="reply.text" />
                 </div>
             </li>
         </ul>
@@ -124,14 +126,14 @@ watch(
         <p v-if="!isAuthReady" class="status" role="status">認証状況を確認しています...</p>
         <form v-else-if="user" class="reply-form" @submit.prevent="PostReplies">
             <label for="reply-text">返信を書く</label>
-            <textarea
+            <CodeTextarea
                 id="reply-text"
                 v-model="text"
                 name="reply-textarea"
                 :disabled="isPosting"
                 placeholder="考えや経験を書いてみましょう"
                 rows="4"
-            ></textarea>
+            />
             <div class="reply-form-footer">
                 <p v-if="PosterrorMessage" class="status status--error" role="alert">{{ PosterrorMessage }}</p>
                 <button class="button button--primary" type="submit" :disabled="isPosting || !text.trim()">

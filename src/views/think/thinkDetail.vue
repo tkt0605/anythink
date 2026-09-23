@@ -4,6 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { supabase } from '../../lib/supabase.ts'
 import ReplyForm from '../../components/Replies.vue'
 import Knowledge from '../../components/Knowledge.vue'
+import FormattedText from '../../components/FormattedText.vue'
 import { useAuth } from '../../composables/useAuth.ts'
 
 type Think = {
@@ -175,7 +176,7 @@ watch(
                 <section class="thought-card surface" aria-label="元の考え">
                     <p v-if="isLoading" class="status" role="status">考えを読み込んでいます...</p>
                     <p v-else-if="errorMessage" class="status status--error" role="alert">{{ errorMessage }}</p>
-                    <h2 v-else-if="think" class="thought-text">{{ think.text }}</h2>
+                    <FormattedText v-else-if="think" class="thought-text" :text="think.text" />
                 </section>
 
                 <ReplyForm
