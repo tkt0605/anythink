@@ -11,12 +11,17 @@ const signOutError = ref('')
 
 const isHome = computed(() => route.name === 'home')
 const isThinkDetail = computed(() => route.name === 'think-detail')
+const isLanding = computed(() => route.name === 'index')
+const isAuthPage = computed(() =>
+  route.name === 'login' ||
+  route.name === 'signup' ||
+  route.path === '/auth/callback'
+)
+const isPublicPage = computed(() => isLanding.value || isAuthPage.value)
 const showRightRail = computed(() => isHome.value || isThinkDetail.value)
 const pageTitle = computed(() => {
   if (isHome.value) return 'ホーム'
   if (isThinkDetail.value) return 'Think'
-  if (route.name === 'login') return 'ログイン'
-  if (route.name === 'signup') return '新規登録'
   return 'Anythink'
 })
 
@@ -44,17 +49,55 @@ async function handleSignOut() {
 
 <template>
   <a class="skip-link" href="#main-content">本文へ移動</a>
-  <div class="app-shell" :class="{ 'app-shell--with-rail': showRightRail }">
+
+  <div
+    v-if="isPublicPage"
+    class="public-shell"
+    :class="{
+      'public-shell--landing': isLanding,
+      'public-shell--auth': isAuthPage
+    }"
+  >
+    <header class="public-header">
+      <div class="public-header-inner">
+        <RouterLink class="brand" :to="{ name: 'index' }" aria-label="Anythink はじめのページ">
+          <!-- <span class="brand-mark" aria-hidden="true">A</span> -->
+          <span class="brand-name">Anythink</span>
+        </RouterLink>
+
+        <nav class="public-header-nav" aria-label="アカウントメニュー">
+          <span v-if="!isAuthReady" class="header-status" role="status">確認中...</span>
+          <RouterLink v-else-if="user" class="button button--soft button--small" :to="{ name: 'home' }">
+            ホームへ
+          </RouterLink>
+          <template v-else-if="isLanding">
+            <RouterLink class="public-login-link" :to="{ name: 'login' }">ログイン</RouterLink>
+            <RouterLink class="button button--primary button--small" :to="{ name: 'signup' }">無料ではじめる</RouterLink>
+          </template>
+          <template v-else-if="route.name === 'login'">
+            <span class="public-header-prompt">はじめての方</span>
+            <RouterLink class="button button--ghost button--small" :to="{ name: 'signup' }">新規登録</RouterLink>
+          </template>
+          <template v-else-if="route.name === 'signup'">
+            <span class="public-header-prompt">アカウントをお持ちの方</span>
+            <RouterLink class="button button--ghost button--small" :to="{ name: 'login' }">ログイン</RouterLink>
+          </template>
+        </nav>
+      </div>
+    </header>
+
+    <div class="public-content">
+      <RouterView />
+    </div>
+  </div>
+
+  <div v-else class="app-shell" :class="{ 'app-shell--with-rail': showRightRail }">
     <aside class="left-rail" aria-label="メインメニュー">
       <div class="left-rail-top">
-        <!-- <RouterLink class="brand" :to="{ name: 'index' }" aria-label="Anythink ホーム">
-          <span class="brand-mark" aria-hidden="true">A</span>
+        <RouterLink class="brand" :to="{ name: 'index' }" aria-label="Anythink はじめのページ">
+          <!-- <span class="brand-mark" aria-hidden="true">A</span> -->
           <span class="brand-name">Anythink</span>
-        </RouterLink> -->
-        <div class="brand">
-          <span class="brand-mark" aria-hidden="true">A</span>
-          <span class="brand-name">Anythink</span>
-        </div>
+        </RouterLink>
 
         <nav class="side-nav">
           <RouterLink :to="{ name: 'home' }">
