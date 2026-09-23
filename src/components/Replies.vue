@@ -106,9 +106,9 @@ watch(
 </script>
 <template>
     <section class="discussion-card surface" aria-labelledby="discussion-title">
-        <div class="section-card-head">
+        <!-- <div class="section-card-head">
             <h2 id="discussion-title">会話</h2>
-        </div>
+        </div> -->
         <p v-if="isFetching" class="status" role="status">会話を読み込んでいます...</p>
         <p v-else-if="FetcherrorMessage" class="status status--error" role="alert">{{ FetcherrorMessage }}</p>
         <p v-else-if="replies.length === 0" class="discussion-empty">まだ会話はありません。最初のひとことをどうぞ。</p>

@@ -183,16 +183,12 @@ watch(
                     :think-id="String(think.id)"
                     @count-change="discussCount = $event"
                 />
-                <Knowledge
-                    v-if="think"
-                    :think-id="String(think.id)"
-                    :discuss-count="discussCount"
-                    :can-manage="isThinkOwner"
-                />
             </div>
+        </div>
 
-            <section class="detail-sidebar" aria-labelledby="related-title">
-                <div class="related-panel surface">
+        <Teleport to="#think-right-rail">
+            <div class="detail-sidebar">
+                <section class="related-panel rail-card" aria-labelledby="related-title">
                     <h2 id="related-title">関連する考え</h2>
                     <p v-if="isRelatedLoading" class="status" role="status">関連する考えを探しています...</p>
                     <div v-else-if="relatedErrorMessage" class="related-error">
@@ -215,8 +211,15 @@ watch(
                             </RouterLink>
                         </li>
                     </ul>
-                </div>
-            </section>
-        </div>
+                </section>
+
+                <Knowledge
+                    v-if="think"
+                    :think-id="String(think.id)"
+                    :discuss-count="discussCount"
+                    :can-manage="isThinkOwner"
+                />
+            </div>
+        </Teleport>
     </main>
 </template>

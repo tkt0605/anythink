@@ -113,7 +113,7 @@ onMounted(fetchThinks)
 
         <div class="feed-layout">
             <section class="composer-card surface" aria-labelledby="composer-title">
-                <h2 id="composer-title">考えを書く</h2>
+                <!-- <h2 id="composer-title">考えを書く</h2> -->
 
                 <p v-if="!isAuthReady" class="status" role="status">認証状況を確認しています...</p>
                 <form v-else-if="user" class="composer-form" @submit.prevent="createThinks">
@@ -167,9 +167,9 @@ onMounted(fetchThinks)
             </section>
 
             <section class="feed-section" aria-labelledby="feed-title">
-                <div class="feed-section-head">
+                <!-- <div class="feed-section-head">
                     <h2 id="feed-title">投稿</h2>
-                </div>
+                </div> -->
 
                 <p v-if="isLoading" class="status surface" role="status">投稿を読み込んでいます...</p>
                 <p v-else-if="errorMessage" class="status status--error" role="alert">{{ errorMessage }}</p>
