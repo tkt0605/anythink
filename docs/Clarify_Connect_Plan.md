@@ -33,23 +33,32 @@ alter table public.thinks
 
 ```sql
 create or replace function public.match_thinks(
-  query_embedding vector(256),
-  exclude_id uuid,
-  match_count int default 3
+  source_think_id uuid,
+  match_count int default 3,
+  match_threshold double precision default 0.0
 )
 returns table (id uuid, text text, similarity float)
 language sql
 stable
 security invoker
 as $$
+  with source_think as (
+    select source.embedding
+    from public.thinks as source
+    where source.id = source_think_id
+      and source.embedding is not null
+  )
   select
-    think.id,
-    think.text,
-    1 - (think.embedding <=> query_embedding) as similarity
-  from public.thinks as think
-  where think.id != exclude_id
-    and think.embedding is not null
-  order by think.embedding <=> query_embedding
+    candidate.id,
+    candidate.text,
+    1 - (candidate.embedding <=> source_think.embedding) as similarity
+  from public.thinks as candidate
+  cross join source_think
+  where candidate.id != source_think_id
+    and candidate.embedding is not null
+    and 1 - (candidate.embedding <=> source_think.embedding)
+      >= match_threshold
+  order by candidate.embedding <=> source_think.embedding
   limit match_count;
 $$;
 ```
@@ -80,14 +89,27 @@ $$;
   4. Voyage呼び出しが失敗しても**投稿自体は失敗させない** — `embedding`を`null`のまま`thinks`にinsertし、サーバー側で`console.error`だけ残す。CONNECTはあくまで補助機能であり、投稿という中核体験をAI連携の不調で止めない、という企画書の「AIは静かな脇役」という原則に沿う判断。
   5. `context.supabase.from('thinks').insert({ text, is_public, embedding })`で作成し、作成行を返す。`user_id`はDBの`auth.uid()`デフォルトとINSERTポリシーに任せる
 
-### 1-4. クライアント変更
+### 1-4. Jevによる関連判定とキャッシュ
+
+- `rank-related-thinks`は`match_thinks`からVoyage類似度上位5件を取得する。
+- Jevは候補ごとに`related_probability`を返し、表示時点の`threshold`以上を最大3件返す。
+- キャッシュキーは、利用者、元Think、候補ID・本文、Jevモデル、プロンプト本文・版から作るSHA-256とする。
+- キャッシュには本文を複製せず、候補IDとJev確率だけを保存する。
+- 同じ候補セットを再表示した場合は保存済み確率を使い、Jev APIを呼ばない。
+- 閾値はキャッシュキーへ含めない。閾値だけ変更した場合は保存済み確率を再利用する。
+- 新しいThinkによりVoyage上位候補が変わった場合や、モデル・プロンプト版を変更した場合だけ再判定する。
+- RLSによる候補範囲が利用者ごとに異なるため、キャッシュは`user_id`単位で分離する。
+- 同一キャッシュキーへの同時リクエストはDBのリースで1件だけJevを実行する。
+- Jevが正常に0件と判断した場合は空配列を採用する。API障害時だけVoyage候補へフォールバックし、マッチ率は表示しない。
+
+### 1-5. クライアント変更
 
 - `Home.vue`の`createThinks()`: `supabase.from('thinks').insert(...)`を`supabase.functions.invoke('create-think', { body: { text: trimmedText, is_public: !isPrivate.value } })`に置き換える
 - `thinkDetail.vue`:
   - `createBigrams` / `calculateSimilarity` / `fetchRelatedThinkss`を削除
-  - `fetchThinkDetail`の`select`に`embedding`を追加
-  - 新しい`fetchRelatedThinks(think)`は`supabase.rpc('match_thinks', { query_embedding: think.embedding, exclude_id: think.id, match_count: 3 })`を呼ぶ
-  - `think.embedding`が`null`(Voyage失敗時など)の場合は、関連リストを「まだありません」と同じ空表示にフォールバックする
+  - ログイン中は`rank-related-thinks`を呼び、Jev確率がある候補だけマッチ率を表示する
+  - 未ログインでは`match_thinks`を直接呼び、Voyage候補を表示するがマッチ率は表示しない
+  - ローディング、0件、エラー、再試行を別々の画面状態として表示する
 
 ---
 
