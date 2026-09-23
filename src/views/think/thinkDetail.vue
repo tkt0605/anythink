@@ -15,31 +15,19 @@ type ThinkDetail = Think&{
     user_id: string
 }
 
-type RelatedThink = Think & {
+type VoyageCandidate = Think & {
     similarity: number
-    related_probability?: number | null
 }
 
-type RankingDebug = {
-    voyage_candidate_count: number
-    jev_answer_count: number | null
-    jev_matched_count: number | null
-    returned_count: number
-    scores: Array<{
-        id: string
-        voyage_similarity: number
-        related_probability: number | null
-        passed_threshold: boolean | null
-    }>
+type RelatedThink = VoyageCandidate & {
+    related_probability: number | null
 }
 
 type RankRelatedThinksResponse = {
     related_thinks: RelatedThink[]
     ranking_method: 'jev' | 'voyage_fallback'
     threshold: number
-    model?: string
-    rerank_reason?: string
-    debug?: RankingDebug
+    cache_status: 'hit' | 'miss' | 'none' | 'pending' | 'unavailable'
 }
 const { user } = useAuth();
 const   think = ref<ThinkDetail | null>(null)
@@ -72,7 +60,12 @@ async function fetchVoyageRelatedThinks(
         throw error
     }
 
-    return (data ?? []) as RelatedThink[]
+    const candidates = (data ?? []) as VoyageCandidate[]
+
+    return candidates.map((candidate) => ({
+        ...candidate,
+        related_probability: null
+    }))
 }
 
 async function fetchRelatedThinks(sourceThinkId: string) {
@@ -101,48 +94,15 @@ async function fetchRelatedThinks(sourceThinkId: string) {
                     }
                 )
 
-            if (data) {
-                console.groupCollapsed('関連Thinkデバッグ')
-                console.info('判定方法:', data.ranking_method)
-                console.info('Jevモデル:', data.model ?? '未使用')
-                console.info('通過閾値:', `${data.threshold * 100}%`)
-
-                if (data.rerank_reason) {
-                    console.info('Voyageフォールバック理由:', data.rerank_reason)
-                }
-
-                if (data.debug) {
-                    console.info('Voyage候補数:', data.debug.voyage_candidate_count)
-                    console.info('Jev回答数:', data.debug.jev_answer_count)
-                    console.info('閾値通過数:', data.debug.jev_matched_count)
-                    console.info('画面へ返した件数:', data.debug.returned_count)
-                    console.table(data.debug.scores)
-                } else {
-                    console.info('デバッグ情報なし（デプロイ済みFunctionは旧版の可能性があります）')
-                }
-
-                console.groupEnd()
-            }
-
-            if (
-                !error &&
-                data &&
-                Array.isArray(data.related_thinks)
-            ) {
-                relatedThinks.value = data.related_thinks
-                return
-            }
             if (error) {
-                console.warn(
-                    'Jev再ランキングでエラーが発生。Voyage検索へ切り替えます。',
-                    error
-                )
-            } else {
-                console.warn(
-                    'Jev再ランキングのレスポンス形式が不正なため、Voyage検索へ切り替えます。'
-                )
+                throw error
             }
-            relatedThinks.value = await fetchVoyageRelatedThinks(sourceThinkId)
+
+            if (!data || !Array.isArray(data.related_thinks)) {
+                throw new Error('関連Thinkのレスポンス形式が正しくありません。')
+            }
+
+            relatedThinks.value = data.related_thinks
             return
         }
 
@@ -153,6 +113,17 @@ async function fetchRelatedThinks(sourceThinkId: string) {
     } finally {
         isRelatedLoading.value = false
     }
+}
+
+async function retryRelatedThinks() {
+    if (think.value) {
+        await fetchRelatedThinks(think.value.id)
+    }
+}
+
+function formatMatchProbability(probability: number) {
+    const normalizedProbability = Math.min(Math.max(probability, 0), 1)
+    return Math.round(normalizedProbability * 100)
 }
 
 async function fetchThinkDetail(thinkId: string){
@@ -223,19 +194,23 @@ watch(
             <section class="detail-sidebar" aria-labelledby="related-title">
                 <div class="related-panel surface">
                     <h2 id="related-title">関連する考え</h2>
-                    <p v-if="isRelatedLoading" class="status" role="status">探しています...</p>
-                    <p v-else-if="relatedErrorMessage" class="status status--error" role="alert">{{ relatedErrorMessage }}</p>
-                    <p v-else-if="relatedThinks.length === 0" class="related-empty">関連する考えはまだありません。</p>
+                    <p v-if="isRelatedLoading" class="status" role="status">関連する考えを探しています...</p>
+                    <div v-else-if="relatedErrorMessage" class="related-error">
+                        <p class="status status--error" role="alert">{{ relatedErrorMessage }}</p>
+                        <button class="button button--ghost button--small" type="button" @click="retryRelatedThinks">
+                            もう一度試す
+                        </button>
+                    </div>
+                    <p v-else-if="relatedThinks.length === 0" class="related-empty">関連する考えは見つかりませんでした。</p>
                     <ul v-else class="related-list">
                         <li v-for="relatedThink in relatedThinks" :key="relatedThink.id">
                             <RouterLink :to="{ name: 'think-detail', params: { id: relatedThink.id } }">
-                                <span>{{ relatedThink.text }}</span>
-                                <span v-if="
-                                    relatedThink.related_probability !== null &&
-                                    relatedThink.related_probability !== undefined
-                                ">
-                                    マッチ率
-                                    {{ Math.round(relatedThink.related_probability * 100) }}%
+                                <span class="related-think-text">{{ relatedThink.text }}</span>
+                                <span
+                                    v-if="relatedThink.related_probability !== null"
+                                    class="match-badge"
+                                >
+                                    {{ formatMatchProbability(relatedThink.related_probability) }}%マッチ
                                 </span>
                             </RouterLink>
                         </li>

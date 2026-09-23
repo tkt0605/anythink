@@ -116,9 +116,12 @@ textarea:disabled, input:disabled { background: var(--soft); cursor: not-allowed
 .related-panel { padding-top: 29px; }
 .related-panel h2 { margin: 0 0 13px; font-size: 1.15rem; }
 .related-empty { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.related-error { display: grid; justify-items: start; gap: 10px; }
+.related-error .status { margin-top: 0; }
 .related-list li + li { margin-top: 8px; }
-.related-list a { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; color: var(--accent); font-size: 0.9rem; overflow-wrap: anywhere; }
-.related-list a span:last-child { flex-shrink: 0; }
+.related-list a { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 12px 0; color: var(--accent); font-size: 0.9rem; overflow-wrap: anywhere; }
+.related-think-text { min-width: 0; }
+.match-badge { flex-shrink: 0; padding: 3px 8px; border: 1px solid #c8dfcf; border-radius: 999px; background: #eff8f1; color: #24614f; font-size: 0.75rem; font-weight: 700; line-height: 1.4; white-space: nowrap; }
 .related-list a:hover { color: var(--accent-hover); }
 .section-card-head { margin-bottom: 0; }
 .discussion-empty, .knowledge-empty { margin: 0; color: var(--muted); font-size: 0.9rem; }
@@ -176,6 +179,7 @@ textarea:disabled, input:disabled { background: var(--soft); cursor: not-allowed
   .visibility-description { justify-self: end; }
   .composer-footer > .button { width: 100%; }
   .composer-guest, .reply-guest { align-items: flex-start; flex-direction: column; }
+  .related-list a { align-items: flex-start; flex-direction: column; gap: 7px; }
   .auth-main { padding-block: 50px 70px; }
 }
 
